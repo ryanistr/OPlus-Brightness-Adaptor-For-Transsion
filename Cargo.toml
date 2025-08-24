@@ -1,0 +1,20 @@
+[package]
+name = "oplusbright"
+version = "0.1.0"
+edition = "2024"
+
+
+[dependencies]
+base64 = "0.22.1"
+libc = "0.2.175"
+
+[profile.release]
+opt-level = "s"
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[[bin]]
+name = "xia_display_adaptor"
+path = "src/bin/xia.displayadaptor.rs"
