@@ -1,10 +1,6 @@
 ### OPlus-Brightness-Adaptor-For-Transsion
-A Quick Fix and simple for OPlus/Oppo/Realme Ports on Transsion Devices
-by @rianixia on telegram, do credit when use.
-
 
 A quick fix and simple solution for OPlus/Oppo/Realme ports on Transsion devices.
-
 *By @rianixia on Telegram. Please give credit when using.*
 
 The code is open source because I decided not to gatekeep it. If you know a better logic or method, please share! I'm always listening to feedback—even if my responses are rough. Thank you\~
