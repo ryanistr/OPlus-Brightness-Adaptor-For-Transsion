@@ -17,7 +17,7 @@ Just add this alongside them.
 
 ## How to Use
 
-> **Note:** Originally made for OS15 ROMs. For OS14 or lower, it's recommended to add this property:
+> **Note:** Originally made for OS15 ROMs. For OS14 or lower, you may want to add this property:
 
 ```bash
 persist.sys.rianixia.brightness.isfloat=true
