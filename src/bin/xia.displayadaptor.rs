@@ -176,28 +176,30 @@ fn main() {
         let cur_state = gs();
         let cur_bright = gb(&ir);
 
-        let val_to_write = if cur_state != 2 && prev_state == 2 {
-            // Screen just turned off
-            F_Z
-        } else if cur_state == 2 {
-            // Screen on
-            if prev_state != 2 {
-                sleep(Duration::from_millis(100)); 
-            }
-            sb(cur_bright, h1, h2, ir.mn, ir.mx)
-        } else {
-            last_val // keep previous value
-        };
+        // Only recompute and write if the raw brightness or screen state changed
+        if cur_bright != prev_bright || cur_state != prev_state {
+            let val_to_write = if cur_state != 2 && prev_state == 2 {
+                // Screen just turned off
+                F_Z
+            } else if cur_state == 2 {
+                // Screen on
+                if prev_state != 2 { sleep(Duration::from_millis(100)); }
+                sb(cur_bright, h1, h2, ir.mn, ir.mx)
+            } else {
+                last_val // keep previous value
+            };
 
-        if val_to_write != last_val {
-            wb(fd, val_to_write, &mut last_val, dbg);
+            if val_to_write != last_val {
+                wb(fd, val_to_write, &mut last_val, dbg);
+            }
         }
 
-        prev_state = cur_state;
         prev_bright = cur_bright;
+        prev_state = cur_state;
+
         sleep(Duration::from_millis(100));
-    } 
-} 
+    }
+}
 
 fn wb(fd: i32, v: i32, last: &mut i32, dbg: bool) {
     if *last == v {
