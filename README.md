@@ -1,23 +1,16 @@
 ### OPlus-Brightness-Adaptor-For-Transsion
-<<<<<<< HEAD
-=======
 A Quick Fix and simple for OPlus/Oppo/Realme Ports on Transsion Devices
 by @rianixia on telegram, do credit when use.
->>>>>>> 08bd33247399b4d298b30fb4c791dbcc4586e281
+
 
 A quick fix and simple solution for OPlus/Oppo/Realme ports on Transsion devices.
 
 *By @rianixia on Telegram. Please give credit when using.*
 
-<<<<<<< HEAD
 The code is open source because I decided not to gatekeep it. If you know a better logic or method, please share! I'm always listening to feedback—even if my responses are rough. Thank you\~
-=======
+
 ### How to Use
 *Note : This was originally made for OS15 ROMs but if you want to try on OS14 or under i recommend you to add this prop*
-```persist.sys.rianixia.brightness.isfloat=true```
->>>>>>> 08bd33247399b4d298b30fb4c791dbcc4586e281
-
----
 
 ## ⚠️ Important
 
@@ -86,11 +79,7 @@ ro.vendor.transsion.backlight_hal.optimization=1
 ro.transsion.backlight.level=-1
 ro.transsion.physical.backlight.optimization=1
 ```
-<<<<<<< HEAD
 
----
-
-### License
 
 Open source. Use responsibly and give credit.
 
