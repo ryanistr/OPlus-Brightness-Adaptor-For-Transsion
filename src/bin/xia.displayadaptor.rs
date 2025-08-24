@@ -12,6 +12,7 @@ unsafe extern "C" {
     fn __android_log_print(prio: c_int, tag: *const c_char, fmt: *const c_char, ...) -> c_int;
 }
 
+// fixed brightness min/max for fallback if dynamic fail for whatever reason
 const L_A: c_int = 3;
 const L_B: c_int = 6;
 const F_X: i32 = 8191;
