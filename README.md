@@ -7,7 +7,7 @@ The code is open source bc i decide to not gatekept this, if you know a better l
 ## DO NOT DELETE UR STOCK TRANSSION LIGHT HALS JUST ADD THIS ALONG WITH IT.
 
 ### How to Use
-*Note :: This was originally made for OS15 ROMs but if you want to try on OS14 or under i recommend you to add this prop*
+*Note : This was originally made for OS15 ROMs but if you want to try on OS14 or under i recommend you to add this prop*
 ```persist.sys.rianixia.brightness.isfloat=true``
 
 
