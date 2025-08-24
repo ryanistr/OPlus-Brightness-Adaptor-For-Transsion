@@ -65,8 +65,8 @@ fn is_float_mode() -> bool {
 
 // get current brightness and screenstate
 fn rf(p: &str) -> Option<i32> { std::fs::read_to_string(p).ok()?.trim().parse().ok() }
-fn gb(ir: &IR) -> i32 {
-    if is_float_mode() {
+fn gb(ir: &IR, is_float: bool) -> i32 {
+    if is_float {
         if let Some(val_str) = gp("debug.tracing.screen_brightness") {
             if let Ok(f) = val_str.parse::<f32>() {
                 let f = f.clamp(0.0, 1.0);
@@ -80,6 +80,7 @@ fn gb(ir: &IR) -> i32 {
             .unwrap_or(F_Y)
     }
 }
+
 fn gs() -> i32 { gp("debug.tracing.screen_state").and_then(|v| v.parse::<i32>().ok()).unwrap_or(2) }
 
 // scale brightness
@@ -146,7 +147,7 @@ impl IR {
 fn main() {
     let dbg = dbg_on();
     if dbg { ld("[DisplayAdaptor] Service starting..."); }
-
+    let is_float = is_float_mode();   // check float once
     let min_path = min_bright_path();
     let max_path = max_bright_path();
     let bright = bright_path();
@@ -168,7 +169,7 @@ fn main() {
 
     let mut last_val = -1;
     let mut prev_state = gs();
-    let mut prev_bright = gb(&ir);
+    let mut prev_bright = gb(&ir, is_float);
     let initial = sb(prev_bright, h1, h2, ir.mn, ir.mx);
     wb(fd, initial, &mut last_val, dbg);
 
