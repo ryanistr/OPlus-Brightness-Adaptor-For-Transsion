@@ -8,8 +8,6 @@ The code is open source because I decided not to gatekeep it. If you know a bett
 ### Download
 **[GitHub Releases page](https://github.com/ryanistr/OPlus-Brightness-Adaptor-For-Transsion/releases/tag/4.0)**.
 
-### How to Use
-*Note : This was originally made for OS15 ROMs but if you want to try on OS14 or under i recommend you to add this prop*
 
 ## ⚠️ Important
 
