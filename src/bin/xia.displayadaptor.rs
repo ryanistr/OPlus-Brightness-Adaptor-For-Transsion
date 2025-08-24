@@ -175,9 +175,8 @@ fn main() {
 
     loop {
         let cur_state = gs();
-        let cur_bright = gb(&ir);
+        let cur_bright = gb(&ir, is_float); // pass the cached is_float
 
-        // Only recompute and write if the raw brightness or screen state changed
         if cur_bright != prev_bright || cur_state != prev_state {
             let val_to_write = if cur_state != 2 && prev_state == 2 {
                 // Screen just turned off

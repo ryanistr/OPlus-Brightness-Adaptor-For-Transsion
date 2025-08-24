@@ -1,1 +1,8 @@
+# author @rianixia
+#respect my work and give credit when use or modified.
+    
+service xia.display.adaptor /vendor/bin/hw/vendor.xia.display.adaptor-V4@1.0-service
+    class main
+    user system
+    group system
 
