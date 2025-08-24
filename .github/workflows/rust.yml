@@ -1,0 +1,56 @@
+name: Rust Android Build
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+env:
+  CARGO_TERM_COLOR: always
+  ANDROID_NDK_VERSION: 26.2.11394342   # latest stable as of 2025
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Rust targets
+      run: rustup target add aarch64-linux-android
+
+    - name: Install Android NDK
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y unzip
+        wget https://dl.google.com/android/repository/android-ndk-r${ANDROID_NDK_VERSION}-linux.zip
+        unzip android-ndk-r${ANDROID_NDK_VERSION}-linux.zip
+        mv android-ndk-r${ANDROID_NDK_VERSION} $HOME/android-ndk
+
+    - name: Configure Cargo linker
+      run: |
+        mkdir -p .cargo
+        cat > .cargo/config.toml <<EOF
+        [target.aarch64-linux-android]
+        linker = "${HOME}/android-ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android21-clang"
+        EOF
+
+    - name: Build for Android (release)
+      run: cargo build --release --target aarch64-linux-android
+
+    - name: Strip binary
+      run: |
+        $HOME/android-ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip target/aarch64-linux-android/release/xia_display_adaptor
+
+    - name: Install UPX
+      run: sudo apt-get install -y upx
+
+    - name: UPX compress
+      run: upx --brute target/aarch64-linux-android/release/xia_display_adaptor
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-xia_display_adaptor
+        path: target/aarch64-linux-android/release/xia_display_adaptor
