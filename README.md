@@ -1,52 +1,99 @@
 ### OPlus-Brightness-Adaptor-For-Transsion
+<<<<<<< HEAD
+=======
 A Quick Fix and simple for OPlus/Oppo/Realme Ports on Transsion Devices
 by @rianixia on telegram, do credit when use.
+>>>>>>> 08bd33247399b4d298b30fb4c791dbcc4586e281
 
-The code is open source bc i decide to not gatekept this, if you know a better logic, better ways to do this please do tell me im all ears and feel free to give feedbacks im always listening despite my rough response. Thank you~
+A quick fix and simple solution for OPlus/Oppo/Realme ports on Transsion devices.
 
-## DO NOT DELETE UR STOCK TRANSSION LIGHT HALS JUST ADD THIS ALONG WITH IT.
+*By @rianixia on Telegram. Please give credit when using.*
 
+<<<<<<< HEAD
+The code is open source because I decided not to gatekeep it. If you know a better logic or method, please share! I'm always listening to feedback—even if my responses are rough. Thank you\~
+=======
 ### How to Use
 *Note : This was originally made for OS15 ROMs but if you want to try on OS14 or under i recommend you to add this prop*
 ```persist.sys.rianixia.brightness.isfloat=true```
+>>>>>>> 08bd33247399b4d298b30fb4c791dbcc4586e281
 
+---
 
-# Step 1. Copy Everything to your vendor
-File structure should looks like this
-/vendor/bin/hw/vendor.xia.display.adaptor-V4@1.0-service
-/vendor/etc/init/init.xia.display.adaptor.rc
+## ⚠️ Important
 
-# Step 3. Set the binary file context to
-```u:object_r:mtk_hal_light_exec:s0```
+**DO NOT DELETE your stock Transsion light HALs.**
+Just add this alongside them.
 
-# Final : Add this prop for debugging or completely skip if youre certain
-```persist.sys.rianixia.display-debug=true```
+---
 
-# SEPolicy? 
-None.
-Address them yourself or use permissive each device has different sysfs labels
+## How to Use
 
-# IPS LCD Displays
-For IPS LCD probably works as is. if not refer and try to AMOLED method 
+> **Note:** Originally made for OS15 ROMs. For OS14 or lower, it's recommended to add this property:
 
-# AMOLED Displays
-but for AMOLED devices
-make sure to check my_product and remove props that has these words : vrr, brightness, silky, underscreen
-and add these props in vendor prop
+```bash
+persist.sys.rianixia.brightness.isfloat=true
+```
+
+### Step 1: Copy Files to Vendor
+
+File structure should look like this:
 
 ```
-#brightness prop
+/vendor/bin/hw/vendor.xia.display.adaptor-V4@1.0-service
+/vendor/etc/init/init.xia.display.adaptor.rc
+```
+
+### Step 2: Set Binary File Context to mtk_light on fs_context
+
+<<<<<<< HEAD
+```bash
+u:object_r:mtk_hal_light_exec:s0
+```
+=======
+# Final : Add this prop for debugging or completely skip if youre certain
+```persist.sys.rianixia.display-debug=true```
+>>>>>>> 08bd33247399b4d298b30fb4c791dbcc4586e281
+
+### Step 3: Add Debug Prop (Optional)
+
+```bash
+persist.sys.rianixia.display-debug=true
+```
+
+---
+
+## SEPolicy
+
+None.
+Address manually or use permissive mode. Each device may have different sysfs labels.
+
+---
+
+## Display Types
+
+### IPS LCD Displays
+
+Should work as-is. If not, refer to AMOLED method.
+
+### AMOLED Displays
+
+Make sure to check `my_product` and remove props containing: `vrr`, `brightness`, `silky`, `underscreen`. Then add the following props in vendor properties:
+
+```bash
+# Brightness Props for AMOLED
 persist.sys.tran.brightness.gammalinear.convert=1
-ro.transsion.tran_refresh_rate.support=1
-ro.surface_flinger.set_idle_timer_ms=1200
-sys.surfaceflinger.idle_reduce_framerate_enable=yes
 ro.vendor.transsion.backlight_hal.optimization=1
 ro.transsion.backlight.level=-1
 ro.transsion.physical.backlight.optimization=1
-ro.tran_90hz_refresh_rate.not_support=0
-ro.tran_monitor_display_support=1
-debug.camera.enhance_screen_brightness=0
-ro.tran_refresh_rate_video_detector.support=1
-ro.tran_low_battery_60hz_refresh_rate.support=0
-ro.tran_default_auto_refresh.support=1
 ```
+<<<<<<< HEAD
+
+---
+
+### License
+
+Open source. Use responsibly and give credit.
+
+=======
+
+>>>>>>> 08bd33247399b4d298b30fb4c791dbcc4586e281
