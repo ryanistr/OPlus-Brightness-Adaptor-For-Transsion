@@ -196,8 +196,8 @@ fn main() {
         prev_state = cur_state;
         prev_bright = cur_bright;
         sleep(Duration::from_millis(100));
-}
-
+    } 
+} 
 
 fn wb(fd: i32, v: i32, last: &mut i32, dbg: bool) {
     if *last == v {
