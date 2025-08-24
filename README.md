@@ -8,7 +8,7 @@ The code is open source bc i decide to not gatekept this, if you know a better l
 
 ### How to Use
 *Note : This was originally made for OS15 ROMs but if you want to try on OS14 or under i recommend you to add this prop*
-```persist.sys.rianixia.brightness.isfloat=true``
+```persist.sys.rianixia.brightness.isfloat=true```
 
 
 # Step 1. Copy Everything to your vendor
@@ -20,7 +20,7 @@ File structure should looks like this
 ```u:object_r:mtk_hal_light_exec:s0```
 
 # Final : Add this prop for debugging or completely skip if youre certain
-```persist.sys.rianixia.display-debug=true``
+```persist.sys.rianixia.display-debug=true```
 
 # SEPolicy? 
 None.
