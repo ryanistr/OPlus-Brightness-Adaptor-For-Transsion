@@ -81,8 +81,3 @@ ro.transsion.physical.backlight.optimization=1
 ```
 
 
-Open source. Use responsibly and give credit.
-
-=======
-
->>>>>>> 08bd33247399b4d298b30fb4c791dbcc4586e281
