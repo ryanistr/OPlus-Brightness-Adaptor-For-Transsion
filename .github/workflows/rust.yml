@@ -12,6 +12,7 @@ env:
 
 jobs:
   build-android:
+    name: Rust Android Build
     runs-on: ubuntu-latest
 
     steps:
