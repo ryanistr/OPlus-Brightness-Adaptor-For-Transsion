@@ -65,25 +65,21 @@ fn is_float_mode() -> bool {
 
 // get current brightness and screenstate
 fn rf(p: &str) -> Option<i32> { std::fs::read_to_string(p).ok()?.trim().parse().ok() }
-fn gb() -> i32 {
-    if is_float_mode() { // use float
+fn gb(ir: &IR) -> i32 {
+    if is_float_mode() {
         if let Some(val_str) = gp("debug.tracing.screen_brightness") {
             if let Ok(f) = val_str.parse::<f32>() {
                 let f = f.clamp(0.0, 1.0);
-                let ir = IR::init();
-                let min = ir.mn as f32;
-                let max = ir.mx as f32;
-                return (min + f * (max - min)).round() as i32;
+                return (ir.mn as f32 + f * (ir.mx - ir.mn) as f32).round() as i32;
             }
         }
-        F_Y // fallback
-    } else { // use integer if false or non
+        F_Y
+    } else {
         gp("debug.tracing.screen_brightness")
             .and_then(|v| v.split('.').next()?.parse::<i32>().ok())
             .unwrap_or(F_Y)
     }
 }
-
 fn gs() -> i32 { gp("debug.tracing.screen_state").and_then(|v| v.parse::<i32>().ok()).unwrap_or(2) }
 
 // scale brightness
@@ -159,42 +155,57 @@ fn main() {
     let h2 = rf(max_path).unwrap_or(511);
 
     let mut ir = IR::init();
-    ir.rf();
+    ir.rf(); 
+    if dbg { ld(&format!("[DisplayAdaptor] IR locked: min={}, max={}", ir.mn, ir.mx)); }
 
     let file = OpenOptions::new().write(true).open(bright);
     let fd = match file {
         Ok(f) => f.as_raw_fd(),
-        Err(_) => return,
+        Err(e) => { le(&format!("[DisplayAdaptor] Could not open brightness file: {}", e)); return; },
     };
 
     let mut last_val = -1;
     let mut prev_state = gs();
-    let mut prev_bright = gb();
-    let initial = sb(prev_bright, h1, h2, ir.mn, ir.mx);
-    wb(fd, initial, &mut last_val);
+    let mut prev_bright = gb(&ir);
 
-    let mut last_refresh = Instant::now();
+    let initial = sb(prev_bright, h1, h2, ir.mn, ir.mx);
+    wb(fd, initial, &mut last_val, dbg);
 
     loop {
-        if !ir.l && last_refresh.elapsed() >= Duration::from_secs(5) { ir.rf(); last_refresh = Instant::now(); }
         let cur_state = gs();
-        let cur_bright = gb();
-        if cur_state != 2 && prev_state == 2 { wb(fd, F_Z, &mut last_val); }
-        else if cur_state == 2 {
+        let cur_bright = gb(&ir);
+
+        if cur_state != 2 && prev_state == 2 {
+            // Screen just turned off
+            wb(fd, F_Z, &mut last_val, dbg);
+        } else if cur_state == 2 {
             if prev_state != 2 { sleep(Duration::from_millis(200)); }
-            wb(fd, sb(cur_bright, h1, h2, ir.mn, ir.mx), &mut last_val);
+            let scaled = sb(cur_bright, h1, h2, ir.mn, ir.mx);
+            wb(fd, scaled, &mut last_val, dbg);
         }
+
         prev_state = cur_state;
         prev_bright = cur_bright;
         sleep(Duration::from_millis(100));
     }
 }
-// write value
-fn wb(fd: i32, v: i32, last: &mut i32) {
-    if *last == v { return; }
+
+fn wb(fd: i32, v: i32, last: &mut i32, dbg: bool) {
+    if *last == v {
+        if dbg { ld(&format!("[DisplayAdaptor] Brightness unchanged, value still {}", v)); }
+        return;
+    }
+
+    if dbg { ld(&format!("[DisplayAdaptor] Writing brightness: {} -> {}", *last, v)); }
+
     let s = v.to_string();
-    let c_str = match CString::new(s.as_bytes()) { Ok(c) => c, Err(_) => return, };
+    let c_str = match CString::new(s.as_bytes()) { Ok(c) => c, Err(_) => { le("[DisplayAdaptor] Failed to create CString"); return; } };
     let bytes = c_str.as_bytes_with_nul();
-    unsafe { libc::write(fd, bytes.as_ptr() as *const _, bytes.len()); }
-    *last = v;
+
+    let result = unsafe { libc::write(fd, bytes.as_ptr() as *const _, bytes.len()) };
+    if result < 0 {
+        if dbg { le(&format!("[DisplayAdaptor] Write failed for value {}: {}", v, std::io::Error::last_os_error())); }
+    } else {
+        *last = v;
+    }
 }
