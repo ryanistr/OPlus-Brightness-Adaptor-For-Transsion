@@ -59,7 +59,7 @@ jobs:
     - name: Compress with UPX
       run: upx --brute target/aarch64-linux-android/release/xia_display_adaptor
 
-    - name: Prepare ZIP Structure
+    - name: Prepare Release Folder
       run: |
         mkdir -p release/vendor/bin/hw
         mkdir -p release/vendor/etc/init
@@ -67,16 +67,8 @@ jobs:
         cp init.xia.display.adaptor.rc release/vendor/etc/init/
         cp README.md release/
 
-    - name: Create ZIP Artifact
-      run: |
-        ZIP_NAME="XiaOplusBrightness-release.zip"
-        rm -f $ZIP_NAME
-        cd release
-        zip -r ../$ZIP_NAME *
-        cd ..
-
-    - name: Upload ZIP
+    - name: Upload Release Folder as Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: XiaOplusBrightness
-        path: XiaOplusBrightness-release.zip
+        name: Xia's-OplusBrightness-release
+        path: release
