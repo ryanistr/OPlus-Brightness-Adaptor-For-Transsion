@@ -64,7 +64,7 @@ jobs:
         mkdir -p release/vendor/bin/hw
         mkdir -p release/vendor/etc/init
         cp target/aarch64-linux-android/release/xia_display_adaptor release/vendor/bin/hw/vendor.xia.display.adaptor-V4@1.0-service
-        cp vendor/etc/init/init.xia.display.adaptor.rc release/vendor/etc/init/
+        cp init.xia.display.adaptor.rc release/vendor/etc/init/
         cp README.md release/
 
     - name: Create ZIP Artifact
