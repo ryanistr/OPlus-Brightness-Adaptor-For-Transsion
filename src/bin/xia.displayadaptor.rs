@@ -1,7 +1,7 @@
 use std::ffi::{CString, CStr};
 use std::fs::OpenOptions;
 use std::os::unix::io::AsRawFd;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use std::{thread::sleep};
 use std::os::raw::{c_int, c_char, c_uchar};
 
@@ -118,7 +118,7 @@ impl IR {
 
     fn rf(&mut self) {
         if self.l { return; }
-        let dbg = dbg_on();
+        let _dbg = dbg_on();
         let pmin = gp_i(persist_min());
         let pmax = gp_i(persist_max());
         let rmin = gp_i(sys_prop_min());
@@ -159,7 +159,7 @@ fn main() {
     if dbg { ld(&format!("[DisplayAdaptor] IR locked: min={}, max={}", ir.mn, ir.mx)); }
 
     let file = OpenOptions::new().write(true).open(bright);
-    let mut file = match file {
+    let file = match file {
         Ok(f) => f,
         Err(e) => { le(&format!("[DisplayAdaptor] Could not open brightness file: {}", e)); return; },
     };
@@ -169,7 +169,6 @@ fn main() {
     let mut last_val = -1;
     let mut prev_state = gs();
     let mut prev_bright = gb(&ir);
-
     let initial = sb(prev_bright, h1, h2, ir.mn, ir.mx);
     wb(fd, initial, &mut last_val, dbg);
 
@@ -177,20 +176,28 @@ fn main() {
         let cur_state = gs();
         let cur_bright = gb(&ir);
 
-        if cur_state != 2 && prev_state == 2 {
+        let val_to_write = if cur_state != 2 && prev_state == 2 {
             // Screen just turned off
-            wb(fd, F_Z, &mut last_val, dbg);
+            F_Z
         } else if cur_state == 2 {
-            if prev_state != 2 { sleep(Duration::from_millis(200)); }
-            let scaled = sb(cur_bright, h1, h2, ir.mn, ir.mx);
-            wb(fd, scaled, &mut last_val, dbg);
+            // Screen on
+            if prev_state != 2 {
+                sleep(Duration::from_millis(100)); 
+            }
+            sb(cur_bright, h1, h2, ir.mn, ir.mx)
+        } else {
+            last_val // keep previous value
+        };
+
+        if val_to_write != last_val {
+            wb(fd, val_to_write, &mut last_val, dbg);
         }
 
         prev_state = cur_state;
         prev_bright = cur_bright;
         sleep(Duration::from_millis(100));
-    }
 }
+
 
 fn wb(fd: i32, v: i32, last: &mut i32, dbg: bool) {
     if *last == v {
