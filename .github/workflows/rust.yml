@@ -8,7 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  ANDROID_NDK_VERSION: 26.2.11394342   # latest stable as of 2025
+  ANDROID_NDK_VERSION: r28c
 
 jobs:
   build-android:
@@ -17,36 +17,37 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install Rust targets
+    - name: Install Rust target for Android
       run: rustup target add aarch64-linux-android
 
-    - name: Install Android NDK
+    - name: Download Android NDK
       run: |
         sudo apt-get update
-        sudo apt-get install -y unzip
-        wget https://dl.google.com/android/repository/android-ndk-r${ANDROID_NDK_VERSION}-linux.zip
-        unzip android-ndk-r${ANDROID_NDK_VERSION}-linux.zip
-        mv android-ndk-r${ANDROID_NDK_VERSION} $HOME/android-ndk
+        sudo apt-get install -y unzip wget
+        wget https://dl.google.com/android/repository/android-ndk-${ANDROID_NDK_VERSION}-linux.zip
+        unzip android-ndk-${ANDROID_NDK_VERSION}-linux.zip
+        mv android-ndk-${ANDROID_NDK_VERSION} $HOME/android-ndk
 
-    - name: Configure Cargo linker
+    - name: Configure Cargo linker for aarch64
       run: |
         mkdir -p .cargo
         cat > .cargo/config.toml <<EOF
-        [target.aarch64-linux-android]
-        linker = "${HOME}/android-ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android21-clang"
-        EOF
+[target.aarch64-linux-android]
+linker = "${HOME}/android-ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android21-clang"
+EOF
 
-    - name: Build for Android (release)
+    - name: Build release for Android
       run: cargo build --release --target aarch64-linux-android
 
     - name: Strip binary
       run: |
-        $HOME/android-ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip target/aarch64-linux-android/release/xia_display_adaptor
+        $HOME/android-ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip \
+          target/aarch64-linux-android/release/xia_display_adaptor
 
     - name: Install UPX
       run: sudo apt-get install -y upx
 
-    - name: UPX compress
+    - name: Compress with UPX
       run: upx --brute target/aarch64-linux-android/release/xia_display_adaptor
 
     - name: Upload artifact
