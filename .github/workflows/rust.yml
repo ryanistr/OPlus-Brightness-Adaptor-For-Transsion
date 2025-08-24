@@ -54,8 +54,9 @@ jobs:
 
     - name: Strip binary
       run: |
-        $HOME/android-ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip \
+        ${{ github.workspace }}/.android-ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip \
           target/aarch64-linux-android/release/xia_display_adaptor
+
 
     - name: Install UPX
       run: sudo apt-get install -y upx
