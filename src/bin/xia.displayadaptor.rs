@@ -159,10 +159,12 @@ fn main() {
     if dbg { ld(&format!("[DisplayAdaptor] IR locked: min={}, max={}", ir.mn, ir.mx)); }
 
     let file = OpenOptions::new().write(true).open(bright);
-    let fd = match file {
-        Ok(f) => f.as_raw_fd(),
+    let mut file = match file {
+        Ok(f) => f,
         Err(e) => { le(&format!("[DisplayAdaptor] Could not open brightness file: {}", e)); return; },
     };
+    let fd = file.as_raw_fd(); // make file is alive
+
 
     let mut last_val = -1;
     let mut prev_state = gs();
