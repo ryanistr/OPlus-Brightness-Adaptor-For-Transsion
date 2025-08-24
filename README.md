@@ -38,11 +38,10 @@ File structure should look like this:
 
 ### Step 2: Set Binary File Context to mtk_light on fs_context
 
-<<<<<<< HEAD
 ```bash
 u:object_r:mtk_hal_light_exec:s0
 ```
-=======
+
 # Final : Add this prop for debugging or completely skip if youre certain
 ```persist.sys.rianixia.display-debug=true```
 
