@@ -65,6 +65,7 @@ jobs:
         mkdir -p release/vendor/etc/init
         cp target/aarch64-linux-android/release/xia_display_adaptor release/vendor/bin/hw/vendor.xia.display.adaptor-V4@1.0-service
         cp init.xia.display.adaptor.rc release/vendor/etc/init/
+        cp LICENSE release/
         cp README.md release/
 
     - name: Upload Release Folder as Artifact
