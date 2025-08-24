@@ -21,7 +21,6 @@ jobs:
     - name: Install Rust target for Android
       run: rustup target add aarch64-linux-android
 
-    # Cache NDK so we don’t redownload every run
     - name: Cache Android NDK
       id: cache
       uses: actions/cache@v4
@@ -38,9 +37,6 @@ jobs:
         unzip -q ndk.zip -d . 
         mv android-ndk-${ANDROID_NDK_VERSION} .android-ndk
 
-
-
-    # Configure Cargo linker
     - name: Configure Cargo linker for aarch64
       run: |
         mkdir -p .cargo
@@ -57,15 +53,29 @@ jobs:
         ${{ github.workspace }}/.android-ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip \
           target/aarch64-linux-android/release/xia_display_adaptor
 
-
     - name: Install UPX
       run: sudo apt-get install -y upx
 
     - name: Compress with UPX
       run: upx --brute target/aarch64-linux-android/release/xia_display_adaptor
 
-    - name: Upload artifact
+    - name: Prepare ZIP Structure
+      run: |
+        mkdir -p release/vendor/bin/hw
+        mkdir -p release/vendor/etc/init
+        cp target/aarch64-linux-android/release/xia_display_adaptor release/vendor/bin/hw/vendor.xia.display.adaptor-V4@1.0-service
+        cp vendor/etc/init/init.xia.display.adaptor.rc release/vendor/etc/init/
+        cp README.md release/
+
+    - name: Create ZIP Artifact
+      run: |
+        ZIP_NAME="OplusBrightnessV${GITHUB_REF_NAME}@rianixia.zip"
+        cd release
+        zip -r ../$ZIP_NAME .
+        cd ..
+
+    - name: Upload ZIP
       uses: actions/upload-artifact@v4
       with:
-        name: android-xia_display_adaptor
-        path: target/aarch64-linux-android/release/xia_display_adaptor
+        name: OplusBrightness
+        path: OplusBrightnessV${GITHUB_REF_NAME}@rianixia.zip
