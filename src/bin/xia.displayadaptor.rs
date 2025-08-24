@@ -58,9 +58,32 @@ fn sp(k: &str, v: &str) -> bool {
     unsafe { __system_property_set(ck.as_ptr(), cv.as_ptr()) == 0 }
 }
 
+// add for float support (OS14)
+fn is_float_mode() -> bool {
+    gp("persist.sys.rianixia.brightness.isfloat").as_deref() == Some("true")
+}
+
 // get current brightness and screenstate
 fn rf(p: &str) -> Option<i32> { std::fs::read_to_string(p).ok()?.trim().parse().ok() }
-fn gb() -> i32 { gp("debug.tracing.screen_brightness").and_then(|v| v.split('.').next()?.parse::<i32>().ok()).unwrap_or(F_Y) }
+fn gb() -> i32 {
+    if is_float_mode() { // use float
+        if let Some(val_str) = gp("debug.tracing.screen_brightness") {
+            if let Ok(f) = val_str.parse::<f32>() {
+                let f = f.clamp(0.0, 1.0);
+                let ir = IR::init();
+                let min = ir.mn as f32;
+                let max = ir.mx as f32;
+                return (min + f * (max - min)).round() as i32;
+            }
+        }
+        F_Y // fallback
+    } else { // use integer if false or non
+        gp("debug.tracing.screen_brightness")
+            .and_then(|v| v.split('.').next()?.parse::<i32>().ok())
+            .unwrap_or(F_Y)
+    }
+}
+
 fn gs() -> i32 { gp("debug.tracing.screen_state").and_then(|v| v.parse::<i32>().ok()).unwrap_or(2) }
 
 // scale brightness
