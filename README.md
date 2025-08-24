@@ -39,9 +39,6 @@ File structure should look like this:
 u:object_r:mtk_hal_light_exec:s0
 ```
 
-# Final : Add this prop for debugging or completely skip if youre certain
-```persist.sys.rianixia.display-debug=true```
-
 ### Step 3: Add Debug Prop (Optional)
 
 ```bash
