@@ -60,7 +60,7 @@ fn sp(k: &str, v: &str) -> bool {
 
 // add for float support (OS14)
 fn is_float_mode() -> bool {
-    gp("persist.sys.rianixia.brightness.isfloat").as_deref() == Some("true")
+    gp("persist.sys.rianixia.brightness.isfloat").as_deref() == Some("true") //persist.sys.rianixia.brightness.isfloat=true
 }
 
 // get current brightness and screenstate
