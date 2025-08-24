@@ -70,8 +70,9 @@ jobs:
     - name: Create ZIP Artifact
       run: |
         ZIP_NAME="XiaOplusBrightness-release.zip"
+        rm -f $ZIP_NAME
         cd release
-        zip -r ../$ZIP_NAME * 
+        zip -r ../$ZIP_NAME *
         cd ..
 
     - name: Upload ZIP
@@ -79,4 +80,3 @@ jobs:
       with:
         name: XiaOplusBrightness
         path: XiaOplusBrightness-release.zip
-
