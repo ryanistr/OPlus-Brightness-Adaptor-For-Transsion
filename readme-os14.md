@@ -64,22 +64,3 @@ None.
 Address manually or use permissive mode. Each device may have different sysfs labels.
 
 ---
-
-## Display Types
-
-### IPS LCD Displays
-
-Should work as-is. If not, refer to AMOLED method.
-
-### AMOLED Displays
-
-Make sure to check `my_product` and remove props containing: `vrr`, `brightness`, `silky`, `underscreen`. Then add the following props in vendor properties:
-
-```bash
-# Brightness Props for AMOLED
-persist.sys.tran.brightness.gammalinear.convert=1
-ro.vendor.transsion.backlight_hal.optimization=1
-ro.transsion.backlight.level=-1
-ro.transsion.physical.backlight.optimization=1
-```
-Note:DO NOT DELETE PROPS THAT HAS "MIN" or "MAX" IN THE PROP
