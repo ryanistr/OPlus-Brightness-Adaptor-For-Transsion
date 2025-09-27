@@ -18,11 +18,8 @@ Just add this alongside them.
 
 ## How to Use
 
-> **Note:** Originally made for OS15 ROMs. For OS14 or lower, you may want to add this property:
-
-```bash
-persist.sys.rianixia.brightness.isfloat=true
-```
+> **Note:** Originally made for OS15 ROMs. For OS14 or lower follow this guide instead
+For Android 14 (OS 14) specific instructions, see the [OS14 guide](readme-os14.md).
 
 ### Step 1: Copy Files to Vendor
 
