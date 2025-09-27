@@ -18,6 +18,8 @@ const L_B: c_int = 6;
 const F_X: i32 = 8191;
 const F_Y: i32 = 222;
 const F_Z: i32 = 0;
+const OPLUS_MIN_DEFAULT: i32 = 22;
+const OPLUS_MAX_DEFAULT: i32 = 5118;
 
 // brightness props and path
 fn min_bright_path() -> &'static str { "/sys/class/leds/lcd-backlight/min_brightness" } // devmin path
@@ -29,6 +31,12 @@ fn persist_max() -> &'static str { "persist.sys.rianixia.multibrightness.max" } 
 fn persist_min() -> &'static str { "persist.sys.rianixia.multibrightness.min" }
 fn log_tag() -> &'static str { "Xia-DisplayAdaptor" } //logtag
 fn persist_dbg() -> &'static str { "persist.sys.rianixia.display-debug" } //prop for logs set to true for logging
+
+// New props and paths for OPlus Panel Mode
+fn oplus_bright_path() -> &'static str { "/data/addon/oplus_display/oplus_brightness" }
+fn persist_oplus_min() -> &'static str { "persist.sys.rianixia-display.min" }
+fn persist_oplus_max() -> &'static str { "persist.sys.rianixia-display.max" }
+fn is_oplus_panel_prop() -> &'static str { "persist.sys.rianixia.is-displaypanel.support" }
 
 // logging utils
 fn lg(l: c_int, m: &str) {
@@ -58,12 +66,15 @@ fn sp(k: &str, v: &str) -> bool {
     unsafe { __system_property_set(ck.as_ptr(), cv.as_ptr()) == 0 }
 }
 
-// add for float support (OS14)
+// Mode checkers
+fn is_oplus_panel_mode() -> bool {
+    gp(is_oplus_panel_prop()).as_deref() == Some("true")
+}
 fn is_float_mode() -> bool {
-    gp("persist.sys.rianixia.brightness.isfloat").as_deref() == Some("true") //persist.sys.rianixia.brightness.isfloat=true
+    gp("persist.sys.rianixia.brightness.isfloat").as_deref() == Some("true")
 }
 
-// get current brightness and screenstate
+// Get current brightness and screenstate
 fn rf(p: &str) -> Option<i32> { std::fs::read_to_string(p).ok()?.trim().parse().ok() }
 fn gb(ir: &IR, is_float: bool) -> i32 {
     if is_float {
@@ -80,10 +91,9 @@ fn gb(ir: &IR, is_float: bool) -> i32 {
             .unwrap_or(F_Y)
     }
 }
-
 fn gs() -> i32 { gp("debug.tracing.screen_state").and_then(|v| v.parse::<i32>().ok()).unwrap_or(2) }
 
-// scale brightness
+// Brightness scaling functions
 fn sb(v: i32, h1: i32, h2: i32, i1: i32, i2: i32) -> i32 {
     if h1 >= h2 { return h1.max(0); }
     let i1 = i1.min(i2 - 1);
@@ -100,11 +110,18 @@ fn sb(v: i32, h1: i32, h2: i32, i1: i32, i2: i32) -> i32 {
     (h1 + (pv * (h2 - h1) / 511)).clamp(h1, h2)
 }
 
+fn sb_linear(v: i32, h1: i32, h2: i32, i1: i32, i2: i32) -> i32 {
+    if i1 >= i2 || h1 >= h2 { return h1.max(0); }
+    let clamped_v = v.clamp(i1, i2);
+    let scaled = h1 as i64 + ((clamped_v - i1) as i64 * (h2 - h1) as i64 / (i2 - i1) as i64);
+    scaled as i32
+}
+
 fn dbg_on() -> bool {
     gp(persist_dbg()).as_deref() == Some("true")
 }
 
-// set brigtness min max range
+// set brightness min max range for legacy mode
 #[derive(Clone, Copy, Debug)]
 struct IR { mn: i32, mx: i32, l: bool }
 impl IR {
@@ -119,7 +136,6 @@ impl IR {
 
     fn rf(&mut self) {
         if self.l { return; }
-        let _dbg = dbg_on();
         let pmin = gp_i(persist_min());
         let pmax = gp_i(persist_max());
         let rmin = gp_i(sys_prop_min());
@@ -143,29 +159,81 @@ impl IR {
     }
 }
 
-// brightness service
+// Main dispatcher
 fn main() {
+    if is_oplus_panel_mode() {
+        run_oplus_panel_mode();
+    } else {
+        run_legacy_mode();
+    }
+}
+
+// New logic for OPlus panel support
+fn run_oplus_panel_mode() {
     let dbg = dbg_on();
-    if dbg { ld("[DisplayAdaptor] Service starting..."); }
-    let is_float = is_float_mode();   // check float once
-    let min_path = min_bright_path();
-    let max_path = max_bright_path();
+    if dbg { ld("[DisplayAdaptor] Starting in OPlus Panel Mode..."); }
+
+    let h1 = rf(min_bright_path()).unwrap_or(1);
+    let h2 = rf(max_bright_path()).unwrap_or(511);
+
+    let i1 = gp_i(persist_oplus_min()).unwrap_or(OPLUS_MIN_DEFAULT);
+    let i2 = gp_i(persist_oplus_max()).unwrap_or(OPLUS_MAX_DEFAULT);
+    if dbg { ld(&format!("[OPlus Mode] Scaling range: {}-{} -> {}-{}", i1, i2, h1, h2)); }
+
+    let file = OpenOptions::new().write(true).open(bright_path());
+    let file = match file {
+        Ok(f) => f,
+        Err(e) => { le(&format!("[OPlus Mode] Could not open brightness file: {}", e)); return; },
+    };
+    let fd = file.as_raw_fd();
+
+    let mut last_val = -1;
+    let mut prev_state = gs();
+
+    loop {
+        let cur_state = gs();
+        let val_to_write = if cur_state == 2 {
+            if prev_state != 2 { sleep(Duration::from_millis(100)); }
+            match rf(oplus_bright_path()) {
+                Some(oplus_bright) => sb_linear(oplus_bright, h1, h2, i1, i2),
+                None => {
+                    if dbg { le(&format!("[OPlus Mode] Failed to read from {}", oplus_bright_path())); }
+                    last_val
+                }
+            }
+        } else {
+            F_Z
+        };
+
+        if val_to_write != last_val {
+            wb(fd, val_to_write, &mut last_val, dbg);
+        }
+
+        prev_state = cur_state;
+        sleep(Duration::from_millis(100));
+    }
+}
+
+// Original logic
+fn run_legacy_mode() {
+    let dbg = dbg_on();
+    if dbg { ld("[DisplayAdaptor] Starting in Legacy Mode..."); }
+    let is_float = is_float_mode();
     let bright = bright_path();
 
-    let h1 = rf(min_path).unwrap_or(1);
-    let h2 = rf(max_path).unwrap_or(511);
+    let h1 = rf(min_bright_path()).unwrap_or(1);
+    let h2 = rf(max_bright_path()).unwrap_or(511);
 
     let mut ir = IR::init();
-    ir.rf(); 
-    if dbg { ld(&format!("[DisplayAdaptor] IR locked: min={}, max={}", ir.mn, ir.mx)); }
+    ir.rf();
+    if dbg { ld(&format!("[Legacy Mode] IR locked: min={}, max={}", ir.mn, ir.mx)); }
 
     let file = OpenOptions::new().write(true).open(bright);
     let file = match file {
         Ok(f) => f,
-        Err(e) => { le(&format!("[DisplayAdaptor] Could not open brightness file: {}", e)); return; },
+        Err(e) => { le(&format!("[Legacy Mode] Could not open brightness file: {}", e)); return; },
     };
-    let fd = file.as_raw_fd(); // make file is alive
-
+    let fd = file.as_raw_fd();
 
     let mut last_val = -1;
     let mut prev_state = gs();
@@ -175,18 +243,16 @@ fn main() {
 
     loop {
         let cur_state = gs();
-        let cur_bright = gb(&ir, is_float); // pass the cached is_float
+        let cur_bright = gb(&ir, is_float);
 
         if cur_bright != prev_bright || cur_state != prev_state {
             let val_to_write = if cur_state != 2 && prev_state == 2 {
-                // Screen just turned off
                 F_Z
             } else if cur_state == 2 {
-                // Screen on
                 if prev_state != 2 { sleep(Duration::from_millis(100)); }
                 sb(cur_bright, h1, h2, ir.mn, ir.mx)
             } else {
-                last_val // keep previous value
+                last_val
             };
 
             if val_to_write != last_val {
@@ -196,17 +262,15 @@ fn main() {
 
         prev_bright = cur_bright;
         prev_state = cur_state;
-
         sleep(Duration::from_millis(100));
     }
 }
 
+// Write brightness value
 fn wb(fd: i32, v: i32, last: &mut i32, dbg: bool) {
     if *last == v {
-        if dbg { ld(&format!("[DisplayAdaptor] Brightness unchanged, value still {}", v)); }
         return;
     }
-
     if dbg { ld(&format!("[DisplayAdaptor] Writing brightness: {} -> {}", *last, v)); }
 
     let s = v.to_string();
