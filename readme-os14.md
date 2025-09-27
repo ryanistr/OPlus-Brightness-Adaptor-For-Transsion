@@ -32,6 +32,7 @@ File structure should look like this:
 ```
 
 ### Step 2: Set Binary File Context to mtk_light on fs_context
+> **Note:** Do this for the adaptor binary on /vendor/bin/hw and the displaypanel binary on /vendor/odm/bin/hw/
 
 ```bash
 u:object_r:mtk_hal_light_exec:s0
