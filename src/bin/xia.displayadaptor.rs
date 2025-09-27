@@ -31,7 +31,7 @@ fn persist_max() -> &'static str { "persist.sys.rianixia.multibrightness.max" } 
 fn persist_min() -> &'static str { "persist.sys.rianixia.multibrightness.min" }
 fn log_tag() -> &'static str { "Xia-DisplayAdaptor" } //logtag
 fn persist_dbg() -> &'static str { "persist.sys.rianixia.display-debug" } //prop for logs set to true for logging
-fn oplus_bright_path() -> &'static str { "/data/addon/oplus_display/oplus_brightness" } //prop for OPanel mode
+fn oplus_bright_path() -> &'static str { "/data/addon/oplus_display/oplus_brightness" } // add for OS14 support
 fn persist_oplus_min() -> &'static str { "persist.sys.rianixia-display.min" }
 fn persist_oplus_max() -> &'static str { "persist.sys.rianixia-display.max" }
 fn is_oplus_panel_prop() -> &'static str { "persist.sys.rianixia.is-displaypanel.support" }
@@ -64,7 +64,6 @@ fn sp(k: &str, v: &str) -> bool {
     unsafe { __system_property_set(ck.as_ptr(), cv.as_ptr()) == 0 }
 }
 
-// Mode checkers
 fn is_oplus_panel_mode() -> bool {
     gp(is_oplus_panel_prop()).as_deref() == Some("true")
 }
@@ -102,7 +101,7 @@ fn gb(ir: &IR, is_float: bool) -> i32 {
 }
 fn gs() -> i32 { gp("debug.tracing.screen_state").and_then(|v| v.parse::<i32>().ok()).unwrap_or(2) }
 
-// Brightness scaling 
+// Brightness scaling
 fn sb(v: i32, h1: i32, h2: i32, i1: i32, i2: i32) -> i32 {
     if h1 >= h2 { return h1.max(0); }
     let i1 = i1.min(i2 - 1);
@@ -130,7 +129,7 @@ fn dbg_on() -> bool {
     gp(persist_dbg()).as_deref() == Some("true")
 }
 
-// set brightness min max range for legacy mode
+// set brightness min max range for float mode
 #[derive(Clone, Copy, Debug)]
 struct IR { mn: i32, mx: i32, l: bool }
 impl IR {
@@ -177,7 +176,7 @@ fn main() {
     }
 }
 
-// Add for OS14 OPanel Mode
+// Add for OS14 with DisplayPanel
 fn run_oplus_panel_mode() {
     let dbg = dbg_on();
     if dbg { ld("[DisplayAdaptor] Starting in OPlus Panel Mode..."); }
@@ -187,47 +186,54 @@ fn run_oplus_panel_mode() {
 
     let i1 = gp_i(persist_oplus_min()).unwrap_or(OPLUS_MIN_DEFAULT);
     let i2 = gp_i(persist_oplus_max()).unwrap_or(OPLUS_MAX_DEFAULT);
-    if dbg { ld(&format!("[OPlus Mode] Scaling range: {}-{} -> {}-{}", i1, i2, h1, h2)); }
+    if dbg { ld(&format!("[DisplayPanel Mode] Scaling range: {}-{} -> {}-{}", i1, i2, h1, h2)); }
 
     let file = OpenOptions::new().write(true).open(bright_path());
     let file = match file {
         Ok(f) => f,
-        Err(e) => { le(&format!("[OPlus Mode] Could not open brightness file: {}", e)); return; },
+        Err(e) => { le(&format!("[DisplayPanel Mode] Could not open brightness file: {}", e)); return; },
     };
     let fd = file.as_raw_fd();
 
     let mut last_val = -1;
 
-    // Initialize current_val from the actual hardware brightness
     let mut current_val = rf(bright_path()).unwrap_or(h1);
     wb(fd, current_val, &mut last_val, dbg);
 
     loop {
-        // Smoothing
         current_val = rf(bright_path()).unwrap_or(current_val);
 
-        let target_val = match rf(oplus_bright_path()) {
-            Some(oplus_bright) => sb_linear(oplus_bright, h1, h2, i1, i2),
+        match rf(oplus_bright_path()) {
+            Some(oplus_bright) => {
+                if oplus_bright == 0 {
+                    if current_val != F_Z {
+                        current_val = F_Z;
+                        wb(fd, current_val, &mut last_val, dbg);
+                    }
+                } else {
+                    let target_val = sb_linear(oplus_bright, h1, h2, i1, i2);
+
+                    if current_val != target_val {
+                        let diff = target_val - current_val;
+                        let mut step = diff / 4;
+                        if diff != 0 && step == 0 {
+                            step = if diff > 0 { 1 } else { -1 };
+                        }
+                        
+                        current_val += step;
+                        
+                        if (step > 0 && current_val > target_val) || (step < 0 && current_val < target_val) {
+                            current_val = target_val;
+                        }
+
+                        wb(fd, current_val, &mut last_val, dbg);
+                    }
+                }
+            },
             None => {
-                if dbg { le(&format!("[OPlus Mode] Failed to read from {}", oplus_bright_path())); }
-                current_val 
+                if dbg { le(&format!("[DisplayPanel Mode] Failed to read from {}", oplus_bright_path())); }
             }
         };
-        if current_val != target_val {
-            let diff = target_val - current_val;
-            let mut step = diff / 4;
-            if diff != 0 && step == 0 {
-                step = if diff > 0 { 1 } else { -1 };
-            }
-            
-            current_val += step;
-            
-            if (step > 0 && current_val > target_val) || (step < 0 && current_val < target_val) {
-                current_val = target_val;
-            }
-
-            wb(fd, current_val, &mut last_val, dbg);
-        }
         
         sleep(Duration::from_millis(33));
     }
