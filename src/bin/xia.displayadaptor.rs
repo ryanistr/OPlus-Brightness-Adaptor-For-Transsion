@@ -75,7 +75,18 @@ fn is_float_mode() -> bool {
 }
 
 // Get current brightness and screenstate
-fn rf(p: &str) -> Option<i32> { std::fs::read_to_string(p).ok()?.trim().parse().ok() }
+fn rf(p: &str) -> Option<i32> {
+    if let Ok(content) = std::fs::read_to_string(p) {
+        let numeric_part: String = content
+            .trim()
+            .chars()
+            .take_while(|c| c.is_digit(10))
+            .collect();
+        numeric_part.parse().ok()
+    } else {
+        None
+    }
+}
 fn gb(ir: &IR, is_float: bool) -> i32 {
     if is_float {
         if let Some(val_str) = gp("debug.tracing.screen_brightness") {
@@ -284,3 +295,4 @@ fn wb(fd: i32, v: i32, last: &mut i32, dbg: bool) {
         *last = v;
     }
 }
+
