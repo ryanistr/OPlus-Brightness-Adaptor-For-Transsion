@@ -179,7 +179,7 @@ fn main() {
     }
 }
 
-// New logic for OPlus panel support
+// New logic for OPlus panel support with anti-flicker smoothing
 fn run_oplus_panel_mode() {
     let dbg = dbg_on();
     if dbg { ld("[DisplayAdaptor] Starting in OPlus Panel Mode..."); }
@@ -201,29 +201,58 @@ fn run_oplus_panel_mode() {
     let mut last_val = -1;
     let mut prev_state = gs();
 
+    // Initialize current_val to prevent a jump from 0 on start
+    let mut current_val = match rf(oplus_bright_path()) {
+        Some(b) => sb_linear(b, h1, h2, i1, i2),
+        None => {
+            if dbg { ld("[OPlus Mode] Initial read failed, starting at min."); }
+            h1 // Fallback to hardware min
+        }
+    };
+    wb(fd, current_val, &mut last_val, dbg);
+
     loop {
         let cur_state = gs();
-        let val_to_write = if cur_state == 2 {
-            if prev_state != 2 { sleep(Duration::from_millis(100)); }
+
+        let target_val = if cur_state == 2 { // Screen is on
+            if prev_state != 2 { sleep(Duration::from_millis(100)); } // Add delay when screen turns on
             match rf(oplus_bright_path()) {
                 Some(oplus_bright) => sb_linear(oplus_bright, h1, h2, i1, i2),
                 None => {
                     if dbg { le(&format!("[OPlus Mode] Failed to read from {}", oplus_bright_path())); }
-                    last_val
+                    current_val // Keep current value on read fail
                 }
             }
-        } else {
+        } else { // Screen is off
             F_Z
         };
 
-        if val_to_write != last_val {
-            wb(fd, val_to_write, &mut last_val, dbg);
+        // If there's a difference, smoothly move current_val towards target_val
+        if current_val != target_val {
+            let diff = target_val - current_val;
+            // Move 25% of the distance each frame.
+            // Ensure we move at least 1 unit if there's any difference.
+            let mut step = diff / 4;
+            if diff != 0 && step == 0 {
+                step = if diff > 0 { 1 } else { -1 };
+            }
+            
+            current_val += step;
+            
+            // Prevent overshooting the target
+            if (step > 0 && current_val > target_val) || (step < 0 && current_val < target_val) {
+                current_val = target_val;
+            }
+
+            wb(fd, current_val, &mut last_val, dbg);
         }
 
         prev_state = cur_state;
-        sleep(Duration::from_millis(100));
+        // Use a shorter sleep duration for smoother animation (~30fps).
+        sleep(Duration::from_millis(33));
     }
 }
+
 
 // Original logic
 fn run_legacy_mode() {
