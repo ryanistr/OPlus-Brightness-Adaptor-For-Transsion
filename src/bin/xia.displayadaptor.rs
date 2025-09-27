@@ -179,18 +179,21 @@ fn main() {
 // Add for OS14 with DisplayPanel
 fn run_oplus_panel_mode() {
     let dbg = dbg_on();
-    if dbg { ld("[DisplayAdaptor] Starting in DisplayPanel Mode..."); }
+    if dbg { ld("[DisplayAdaptor] Starting in OPlus Panel Mode..."); }
 
     let oplus_path_str = oplus_bright_path();
     if !std::path::Path::new(oplus_path_str).exists() {
-        if dbg { ld(&format!("[DisplayPanel Mode] File {} not found, creating it.", oplus_path_str)); }
-        match std::fs::File::create(oplus_path_str) {
-            Ok(_) => {
-                if dbg { ld(&format!("[DisplayPanel Mode] Successfully created {}.", oplus_path_str)); }
-            },
-            Err(e) => {
-                le(&format!("[DisplayPanel Mode] Failed to create {}: {}", oplus_path_str, e));
-                return;
+        if dbg { ld(&format!("[OPlus Mode] File {} not found, attempting to create it.", oplus_path_str)); }
+        loop {
+            match std::fs::File::create(oplus_path_str) {
+                Ok(_) => {
+                    if dbg { ld(&format!("[OPlus Mode] Successfully created {}.", oplus_path_str)); }
+                    break;
+                },
+                Err(e) => {
+                    le(&format!("[OPlus Mode] Failed to create {}, retrying in 1s: {}", oplus_path_str, e));
+                    sleep(Duration::from_secs(1));
+                }
             }
         }
     }
@@ -200,12 +203,12 @@ fn run_oplus_panel_mode() {
 
     let i1 = gp_i(persist_oplus_min()).unwrap_or(OPLUS_MIN_DEFAULT);
     let i2 = gp_i(persist_oplus_max()).unwrap_or(OPLUS_MAX_DEFAULT);
-    if dbg { ld(&format!("[DisplayPanel Mode] Scaling range: {}-{} -> {}-{}", i1, i2, h1, h2)); }
+    if dbg { ld(&format!("[OPlus Mode] Scaling range: {}-{} -> {}-{}", i1, i2, h1, h2)); }
 
     let file = OpenOptions::new().write(true).open(bright_path());
     let file = match file {
         Ok(f) => f,
-        Err(e) => { le(&format!("[DisplayPanel Mode] Could not open brightness file: {}", e)); return; },
+        Err(e) => { le(&format!("[OPlus Mode] Could not open brightness file: {}", e)); return; },
     };
     let fd = file.as_raw_fd();
 
@@ -245,7 +248,7 @@ fn run_oplus_panel_mode() {
                 }
             },
             None => {
-                if dbg { le(&format!("[ODisplayPanel Mode] Failed to read from {}", oplus_bright_path())); }
+                if dbg { le(&format!("[OPlus Mode] Failed to read from {}", oplus_bright_path())); }
             }
         };
         
