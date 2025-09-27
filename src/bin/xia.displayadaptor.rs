@@ -179,7 +179,21 @@ fn main() {
 // Add for OS14 with DisplayPanel
 fn run_oplus_panel_mode() {
     let dbg = dbg_on();
-    if dbg { ld("[DisplayAdaptor] Starting in OPlus Panel Mode..."); }
+    if dbg { ld("[DisplayAdaptor] Starting in DisplayPanel Mode..."); }
+
+    let oplus_path_str = oplus_bright_path();
+    if !std::path::Path::new(oplus_path_str).exists() {
+        if dbg { ld(&format!("[DisplayPanel Mode] File {} not found, creating it.", oplus_path_str)); }
+        match std::fs::File::create(oplus_path_str) {
+            Ok(_) => {
+                if dbg { ld(&format!("[DisplayPanel Mode] Successfully created {}.", oplus_path_str)); }
+            },
+            Err(e) => {
+                le(&format!("[DisplayPanel Mode] Failed to create {}: {}", oplus_path_str, e));
+                return;
+            }
+        }
+    }
 
     let h1 = rf(min_bright_path()).unwrap_or(1);
     let h2 = rf(max_bright_path()).unwrap_or(511);
@@ -231,7 +245,7 @@ fn run_oplus_panel_mode() {
                 }
             },
             None => {
-                if dbg { le(&format!("[DisplayPanel Mode] Failed to read from {}", oplus_bright_path())); }
+                if dbg { le(&format!("[ODisplayPanel Mode] Failed to read from {}", oplus_bright_path())); }
             }
         };
         
