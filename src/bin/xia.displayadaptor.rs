@@ -18,8 +18,8 @@ const L_B: c_int = 6;
 const F_X: i32 = 8191;
 const F_Y: i32 = 222;
 const F_Z: i32 = 0;
-const OPLUS_MIN_DEFAULT: i32 = 22;
-const OPLUS_MAX_DEFAULT: i32 = 5118;
+const OS14_MIN: i32 = 22;
+const OS14_MAX: i32 = 5118;
 
 // brightness props and path
 fn min_bright_path() -> &'static str { "/sys/class/leds/lcd-backlight/min_brightness" } // devmin path
@@ -35,6 +35,7 @@ fn oplus_bright_path() -> &'static str { "/data/addon/oplus_display/oplus_bright
 fn persist_oplus_min() -> &'static str { "persist.sys.rianixia-display.min" }
 fn persist_oplus_max() -> &'static str { "persist.sys.rianixia-display.max" }
 fn is_oplus_panel_prop() -> &'static str { "persist.sys.rianixia.is-displaypanel.support" }
+fn persist_custom_devmax_prop() -> &'static str { "persist.sys.rianixia.custom.devmax.brightness" }
 
 // logging utils
 fn lg(l: c_int, m: &str) {
@@ -129,6 +130,19 @@ fn dbg_on() -> bool {
     gp(persist_dbg()).as_deref() == Some("true")
 }
 
+// Helper to get max hardware brightness
+fn get_max_brightness(dbg: bool) -> i32 {
+    if let Some(custom_max) = gp_i(persist_custom_devmax_prop()) {
+        if custom_max > 0 {
+            if dbg { ld(&format!("[DisplayAdaptor] Using custom devmax brightness: {}", custom_max)); }
+            return custom_max;
+        }
+    }
+    let max_from_path = rf(max_bright_path()).unwrap_or(511);
+    if dbg { ld(&format!("[DisplayAdaptor] Using devmax brightness from path: {}", max_from_path)); }
+    max_from_path
+}
+
 // set brightness min max range for float mode
 #[derive(Clone, Copy, Debug)]
 struct IR { mn: i32, mx: i32, l: bool }
@@ -199,10 +213,10 @@ fn run_oplus_panel_mode() {
     }
 
     let h1 = rf(min_bright_path()).unwrap_or(1);
-    let h2 = rf(max_bright_path()).unwrap_or(511);
+    let h2 = get_max_brightness(dbg);
 
-    let i1 = gp_i(persist_oplus_min()).unwrap_or(OPLUS_MIN_DEFAULT);
-    let i2 = gp_i(persist_oplus_max()).unwrap_or(OPLUS_MAX_DEFAULT);
+    let i1 = gp_i(persist_oplus_min()).unwrap_or(OS14_MIN);
+    let i2 = gp_i(persist_oplus_max()).unwrap_or(OS14_MAX);
     if dbg { ld(&format!("[OPlus Mode] Scaling range: {}-{} -> {}-{}", i1, i2, h1, h2)); }
 
     let file = OpenOptions::new().write(true).open(bright_path());
@@ -263,7 +277,7 @@ fn run_legacy_mode() {
     let bright = bright_path();
 
     let h1 = rf(min_bright_path()).unwrap_or(1);
-    let h2 = rf(max_bright_path()).unwrap_or(511);
+    let h2 = get_max_brightness(dbg);
 
     let mut ir = IR::init();
     ir.rf();
