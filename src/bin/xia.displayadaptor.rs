@@ -128,7 +128,18 @@ fn gb(ir: &IR, is_float: bool) -> i32 {
             .unwrap_or(F_Y)
     }
 }
-fn gs() -> i32 { gp("debug.tracing.screen_state").and_then(|v| v.parse::<i32>().ok()).unwrap_or(2) }
+
+// patch: add comments for screen state values
+fn gs() -> i32 {
+    // screen_state values from debug.tracing.screen_state:
+    // 0: OFF (explicitly checked in logic)
+    // 1: OFF (as per user request, same as AOD)
+    // 2: ON
+    // 3: DOZE (AOD)
+    // 4: DOZE_SUSPEND (AOD DIM)
+    gp("debug.tracing.screen_state").and_then(|v| v.parse::<i32>().ok()).unwrap_or(2)
+}
+// end patch
 
 // Brightness scaling
 fn sb(v: i32, h1: i32, h2: i32, i1: i32, i2: i32) -> i32 {
@@ -334,18 +345,27 @@ fn run_legacy_mode() {
                 // state is on
                 if prev_state != 2 { sleep(Duration::from_millis(100)); }
                 sb(cur_bright, h1, h2, ir.mn, ir.mx)
-            } else if cur_state == 0 || cur_state == 1 || cur_state == 3 || cur_state == 4 {
-                // state is explicitly off or doze/doze_suspend
-                if dbg { ld(&format!("[DisplayAdaptor] State is {}, setting brightness 0", cur_state)); }
+            } else if cur_state == 0 || cur_state == 1 {
+                 // state is 0 (OFF) or 1 (AOD), treat as OFF
+                if dbg { ld(&format!("[DisplayAdaptor] State is {} (OFF/AOD), setting brightness 0", cur_state)); }
                 F_Z
+            } else if cur_state == 3 || cur_state == 4 {
+                // state is doze (3) or doze_suspend (4)
+                if is_panoramic_aod_enabled(dbg) {
+                    if dbg { ld(&format!("[DisplayAdaptor] State is {} with Panoramic AOD, deferring brightness 0", cur_state)); }
+                    last_val // don't set to 0
+                } else {
+                    if dbg { ld(&format!("[DisplayAdaptor] State is {} without Panoramic AOD, setting brightness 0", cur_state)); }
+                    F_Z // set to 0
+                }
             } else if prev_state == 2 {
                 // transitioned from on (2) to some other state (not 0, 1, 3, 4)
                 // this is the panoramic aod check
                 if is_panoramic_aod_enabled(dbg) {
-                    if dbg { ld("[DisplayAdaptor] Panoramic AOD enabled, deferring brightness 0"); }
+                    if dbg { ld("[DisplayAdaptor] Transitioned from ON with Panoramic AOD, deferring brightness 0"); }
                     last_val // don't set to 0
                 } else {
-                    if dbg { ld("[DisplayAdaptor] Panoramic AOD disabled, setting brightness 0"); }
+                    if dbg { ld("[DisplayAdaptor] Transitioned from ON without Panoramic AOD, setting brightness 0"); }
                     F_Z // set to 0
                 }
             } else {
