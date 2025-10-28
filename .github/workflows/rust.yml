@@ -63,7 +63,7 @@ jobs:
       run: |
         mkdir -p release/vendor/bin/hw
         mkdir -p release/vendor/etc/init
-        cp target/aarch64-linux-android/release/xia_display_adaptor release/vendor/bin/hw/vendor.xia.display.adaptor-V5@2.0-service
+        cp target/aarch64-linux-android/release/xia_display_adaptor release/vendor/bin/hw/vendor.xia.display.adaptor-V5@3.0-service
         cp init.xia.display.adaptor.rc release/vendor/etc/init/
         cp -r odm release/
         cp LICENSE release/
