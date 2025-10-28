@@ -225,7 +225,7 @@ fn main() {
     if is_oplus_panel_mode() {
         run_oplus_panel_mode();
     } else {
-        run_legacy_mode();
+        run_default_mode();
     }
 }
 
@@ -309,9 +309,9 @@ fn run_oplus_panel_mode() {
     }
 }
 
-fn run_legacy_mode() {
+fn run_default_mode() {
     let dbg = dbg_on();
-    if dbg { ld("[DisplayAdaptor] Starting in Legacy Mode..."); }
+    if dbg { ld("[DisplayAdaptor] Starting in Default Mode..."); }
     let is_float = is_float_mode();
     let bright = bright_path();
 
@@ -320,12 +320,12 @@ fn run_legacy_mode() {
 
     let mut ir = IR::init();
     ir.rf();
-    if dbg { ld(&format!("[Legacy Mode] IR locked: min={}, max={}", ir.mn, ir.mx)); }
+    if dbg { ld(&format!("[Default Mode] IR locked: min={}, max={}", ir.mn, ir.mx)); }
 
     let file = OpenOptions::new().write(true).open(bright);
     let file = match file {
         Ok(f) => f,
-        Err(e) => { le(&format!("[Legacy Mode] Could not open brightness file: {}", e)); return; },
+        Err(e) => { le(&format!("[Default Mode] Could not open brightness file: {}", e)); return; },
     };
     let fd = file.as_raw_fd();
 
@@ -347,15 +347,15 @@ fn run_legacy_mode() {
                 sb(cur_bright, h1, h2, ir.mn, ir.mx)
             } else if cur_state == 0 || cur_state == 1 {
                  // state is 0 (OFF) or 1 (AOD), treat as OFF
-                if dbg { ld(&format!("[DisplayAdaptor] State is {} (OFF/AOD), setting brightness 0", cur_state)); }
+                if dbg { ld(&format!("[DisplayAdaptor] State is {} (OFF), setting brightness 0", cur_state)); }
                 F_Z
             } else if cur_state == 3 || cur_state == 4 {
                 // state is doze (3) or doze_suspend (4)
                 if is_panoramic_aod_enabled(dbg) {
-                    if dbg { ld(&format!("[DisplayAdaptor] State is {} with Panoramic AOD, deferring brightness 0", cur_state)); }
+                    if dbg { ld(&format!("[DisplayAdaptor] State is {} Panoramic AOD is ON, skipping brightness write", cur_state)); }
                     last_val // don't set to 0
                 } else {
-                    if dbg { ld(&format!("[DisplayAdaptor] State is {} without Panoramic AOD, setting brightness 0", cur_state)); }
+                    if dbg { ld(&format!("[DisplayAdaptor] State is {} Panoramic AOD is OFF, setting brightness 0", cur_state)); }
                     F_Z // set to 0
                 }
             } else if prev_state == 2 {
@@ -399,7 +399,7 @@ fn wb(fd: i32, v: i32, last: &mut i32, dbg: bool) {
 
     let result = unsafe { libc::write(fd, bytes.as_ptr() as *const _, bytes.len()) };
     if result < 0 {
-        if dbg { le(&format!("[DisplayAdaptor] Write failed for value {}: {}", v, std::io::Error::last_os_error())); }
+        if dbg { le(&format!("[DisplayAdaptor] Write failed for value {}: {}", v, std::io::Error.last_os_error())); }
     } else {
         *last = v;
     }
