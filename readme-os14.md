@@ -26,7 +26,7 @@ Just add this alongside them.
 File structure should look like this:
 
 ```
-/vendor/bin/hw/vendor.xia.display.adaptor-V4@1.0-service
+/vendor/bin/hw/vendor.xia.display.adaptor-VXXXX-service
 /vendor/etc/init/init.xia.display.adaptor.rc
 /vendor/odm/(all files on odm)
 ```
