@@ -4,8 +4,8 @@ use std::os::unix::io::AsRawFd;
 use std::time::Duration;
 use std::{thread::sleep};
 use std::os::raw::{c_int, c_char, c_uchar};
-use std::process::Command; // patch: import command
-use std::io; // patch: import std::io to resolve ambiguity
+use std::process::Command;
+use std::io;
 
 // import android stuff
 unsafe extern "C" {
@@ -138,16 +138,14 @@ fn gb(ir: &IR, is_float: bool) -> i32 {
 }
 // end patch
 
-// patch: add comments for screen state values
 fn gs() -> i32 {
     // screen_state values from debug.tracing.screen_state:
-    // 1: OFF or AOD Fades out
+    // 1: OFF
     // 2: ON
     // 3: DOZE (AOD)
     // 4: DOZE_SUSPEND (AOD DIM)
     gp("debug.tracing.screen_state").and_then(|v| v.parse::<i32>().ok()).unwrap_or(2)
 }
-// end patch
 
 // Brightness scaling
 fn sb(v: i32, h1: i32, h2: i32, i1: i32, i2: i32) -> i32 {
@@ -158,9 +156,9 @@ fn sb(v: i32, h1: i32, h2: i32, i1: i32, i2: i32) -> i32 {
     if v >= i2 { return h2; }
     let p = (v - i1) * 100 / (i2 - i1);
     let pv = match p {
-        0..=70 => 1 + (149 * p / 70),
-        71..=90 => 150 + (104 * (p - 70) / 20),
-        91..=100 => 254 + (257 * (p - 90) / 10),
+        0..=70 => 1 + (56 * p / 70),
+        71..=90 => 57 + (197 * (p - 70) / 20),
+        91..=100 => 254 + (257 * (p - 90) / 10), // unchanged
         _ => 511,
     };
     (h1 + (pv * (h2 - h1) / 511)).clamp(h1, h2)
@@ -354,7 +352,7 @@ fn run_default_mode() {
         // patch: handle ignore value (-1) from gb
         let raw_bright = gb(&ir, is_float);
         let cur_bright = if raw_bright == -1 {
-            if dbg { ld("[DisplayAdaptor] Brightness reported to be 0? ignoring and keeping previous value."); }
+            if dbg { ld("[DisplayAdaptor] Brightness is 0, ignoring and keeping previous value."); }
             prev_bright // keep old value
         } else {
             raw_bright // use new value
@@ -427,5 +425,6 @@ fn wb(fd: i32, v: i32, last: &mut i32, dbg: bool) {
         *last = v;
     }
 }
+
 
 
