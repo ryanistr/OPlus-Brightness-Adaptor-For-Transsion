@@ -5,6 +5,7 @@ use std::time::Duration;
 use std::{thread::sleep};
 use std::os::raw::{c_int, c_char, c_uchar};
 use std::process::Command; // patch: import command
+use std::io; // patch: import std::io to resolve ambiguity
 
 // import android stuff
 unsafe extern "C" {
@@ -399,7 +400,8 @@ fn wb(fd: i32, v: i32, last: &mut i32, dbg: bool) {
 
     let result = unsafe { libc::write(fd, bytes.as_ptr() as *const _, bytes.len()) };
     if result < 0 {
-        if dbg { le(&format!("[DisplayAdaptor] Write failed for value {}: {}", v, std::io::Error.last_os_error())); }
+        // patch: use io::Error instead of std::io::Error
+        if dbg { le(&format!("[DisplayAdaptor] Write failed for value {}: {}", v, io::Error::last_os_error())); }
     } else {
         *last = v;
     }
