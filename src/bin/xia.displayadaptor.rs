@@ -114,27 +114,34 @@ fn rf(p: &str) -> Option<i32> {
         None
     }
 }
+// patch: modified gb to return -1 if brightness is 0
 fn gb(ir: &IR, is_float: bool) -> i32 {
     if is_float {
         if let Some(val_str) = gp("debug.tracing.screen_brightness") {
             if let Ok(f) = val_str.parse::<f32>() {
+                if f == 0.0 { return -1; } // use -1 to signal ignore
                 let f = f.clamp(0.0, 1.0);
                 return (ir.mn as f32 + f * (ir.mx - ir.mn) as f32).round() as i32;
             }
         }
         F_Y
     } else {
-        gp("debug.tracing.screen_brightness")
-            .and_then(|v| v.split('.').next()?.parse::<i32>().ok())
-            .unwrap_or(F_Y)
+        let val = gp("debug.tracing.screen_brightness")
+            .and_then(|v| v.split('.').next()?.parse::<i32>().ok());
+        // patch: if val is 0, return -1 to signal "ignore"
+        match val {
+            Some(0) => -1,
+            Some(v) => v,
+            None => F_Y
+        }
     }
 }
+// end patch
 
 // patch: add comments for screen state values
 fn gs() -> i32 {
     // screen_state values from debug.tracing.screen_state:
-    // 0: OFF (explicitly checked in logic)
-    // 1: OFF (as per user request, same as AOD)
+    // 1: OFF or AOD Fades out
     // 2: ON
     // 3: DOZE (AOD)
     // 4: DOZE_SUSPEND (AOD DIM)
@@ -333,12 +340,26 @@ fn run_default_mode() {
     let mut last_val = -1;
     let mut prev_state = gs();
     let mut prev_bright = gb(&ir, is_float);
+    // patch: handle case where initial brightness is 0
+    if prev_bright == -1 { 
+        if dbg { ld("[DisplayAdaptor] Initial brightness is 0, using fallback."); }
+        prev_bright = F_Y; 
+    }
+    // end patch
     let initial = sb(prev_bright, h1, h2, ir.mn, ir.mx);
     wb(fd, initial, &mut last_val, dbg);
 
     loop {
         let cur_state = gs();
-        let cur_bright = gb(&ir, is_float);
+        // patch: handle ignore value (-1) from gb
+        let raw_bright = gb(&ir, is_float);
+        let cur_bright = if raw_bright == -1 {
+            if dbg { ld("[DisplayAdaptor] Brightness reported to be 0? ignoring and keeping previous value."); }
+            prev_bright // keep old value
+        } else {
+            raw_bright // use new value
+        };
+        // end patch
 
         if cur_bright != prev_bright || cur_state != prev_state {
             // patch: modified brightness logic for panoramic aod
@@ -406,4 +427,5 @@ fn wb(fd: i32, v: i32, last: &mut i32, dbg: bool) {
         *last = v;
     }
 }
+
 
