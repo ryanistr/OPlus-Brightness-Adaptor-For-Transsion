@@ -1,12 +1,18 @@
 [package]
 name = "oplusbright"
 version = "0.1.0"
-edition = "2024"
-
+edition = "2021" # 2024 is not a valid edition, using 2021
 
 [dependencies]
-base64 = "0.22.1"
-libc = "0.2.175"
+libc = "0.2" # Use semantic versioning
+
+[lib]
+name = "oplusbright"
+path = "src/lib.rs"
+
+[[bin]]
+name = "xia_display_adaptor"
+path = "src/main.rs" # Point to the new main.rs binary
 
 [profile.release]
 opt-level = "s"
@@ -14,7 +20,3 @@ lto = "fat"
 codegen-units = 1
 panic = "abort"
 strip = true
-
-[[bin]]
-name = "xia_display_adaptor"
-path = "src/bin/xia.displayadaptor.rs"
