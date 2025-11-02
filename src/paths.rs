@@ -13,3 +13,4 @@ pub(crate) fn persist_oplus_min() -> &'static str { "persist.sys.rianixia-displa
 pub(crate) fn persist_oplus_max() -> &'static str { "persist.sys.rianixia-display.max" }
 pub(crate) fn is_oplus_panel_prop() -> &'static str { "persist.sys.rianixia.is-displaypanel.support" } // add for OS14 and under
 pub(crate) fn persist_custom_devmax_prop() -> &'static str { "persist.sys.rianixia.custom.devmax.brightness" } // adjust device max value for scaling
+pub(crate) fn display_type_prop() -> &'static str { "persist.sys.rianixia.display.type" } // IPS or AMOLED

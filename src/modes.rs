@@ -8,7 +8,7 @@ use crate::logging::{log_d, log_e};
 use crate::properties::{get_prop, get_prop_int};
 use crate::paths::{
     is_oplus_panel_prop, oplus_bright_path, min_bright_path, persist_oplus_min,
-    persist_oplus_max, bright_path, persist_dbg,
+    persist_oplus_max, bright_path, persist_dbg, display_type_prop,
 };
 use crate::utils::{read_file_int, get_max_brightness, is_panoramic_aod_enabled};
 use crate::scaling::{scale_brightness_linear, scale_brightness_curved};
@@ -27,6 +27,9 @@ pub(crate) fn is_oplus_panel_mode() -> bool {
 }
 pub(crate) fn is_float_mode() -> bool {
     get_prop("persist.sys.rianixia.brightness.isfloat").as_deref() == Some("true")
+}
+pub(crate) fn is_ips_mode() -> bool {
+    get_prop(display_type_prop()).as_deref() == Some("IPS")
 }
 
 // main dispatcher
@@ -148,6 +151,9 @@ fn run_default_mode() {
     let initial = scale_brightness_curved(prev_bright, hw_min, hw_max, range.min, range.max);
     write_brightness(fd, initial, &mut last_val, dbg);
 
+    let is_ips = is_ips_mode();
+    if dbg { log_d(&format!("[Default Mode] IPS Mode: {}", is_ips)); }
+
     loop {
         let cur_state = get_screen_state();
         let raw_bright = get_prop_brightness(&range, is_float);
@@ -163,31 +169,38 @@ fn run_default_mode() {
                 // state is on
                 if prev_state != 2 { sleep(Duration::from_millis(100)); }
                 scale_brightness_curved(cur_bright, hw_min, hw_max, range.min, range.max)
-            } else if cur_state == 0 || cur_state == 1 {
-                 // state is 0 (OFF) or 1 (AOD), treat as OFF
-                if dbg { log_d(&format!("[DisplayAdaptor] State is {} (OFF), setting brightness 0", cur_state)); }
+            } else if is_ips {
+                // IPS mode (no AOD)
+                if dbg { log_d(&format!("[DisplayAdaptor] IPS Mode: State is {} (OFF), setting brightness 0", cur_state)); }
                 BRIGHTNESS_OFF
-            } else if cur_state == 3 || cur_state == 4 {
-                // state is doze (3) or doze_suspend (4)
-                if is_panoramic_aod_enabled(dbg) {
-                    if dbg { log_d(&format!("[DisplayAdaptor] State is {} Panoramic AOD is ON, skipping brightness write", cur_state)); }
-                    last_val // don't set to 0
-                } else {
-                    if dbg { log_d(&format!("[DisplayAdaptor] State is {} Panoramic AOD is OFF, setting brightness 0", cur_state)); }
-                    BRIGHTNESS_OFF // set to 0
-                }
-            } else if prev_state == 2 {
-                // transitioned from on (2) to some other state
-                if is_panoramic_aod_enabled(dbg) {
-                    if dbg { log_d("[DisplayAdaptor] Transitioned from ON with Panoramic AOD, deferring brightness 0"); }
-                    last_val // don't set to 0
-                } else {
-                    if dbg { log_d("[DisplayAdaptor] Transitioned from ON without Panoramic AOD, setting brightness 0"); }
-                    BRIGHTNESS_OFF // set to 0
-                }
             } else {
-                // other state, keep last value
-                last_val
+                // AMOLED / Default
+                if cur_state == 0 || cur_state == 1 {
+                     // state is 0 (OFF) or 1 (AOD), treat as OFF
+                    if dbg { log_d(&format!("[DisplayAdaptor] State is {} (OFF), setting brightness 0", cur_state)); }
+                    BRIGHTNESS_OFF
+                } else if cur_state == 3 || cur_state == 4 {
+                    // state is doze (3) or doze_suspend (4)
+                    if is_panoramic_aod_enabled(dbg) {
+                        if dbg { log_d(&format!("[DisplayAdaptor] State is {} Panoramic AOD is ON, skipping brightness write", cur_state)); }
+                        last_val // don't set to 0
+                    } else {
+                        if dbg { log_d(&format!("[DisplayAdaptor] State is {} Panoramic AOD is OFF, setting brightness 0", cur_state)); }
+                        BRIGHTNESS_OFF // set to 0
+                    }
+                } else if prev_state == 2 {
+                    // transitioned from on (2) to some other state
+                    if is_panoramic_aod_enabled(dbg) {
+                        if dbg { log_d("[DisplayAdaptor] Transitioned from ON with Panoramic AOD, deferring brightness 0"); }
+                        last_val // don't set to 0
+                    } else {
+                        if dbg { log_d("[DisplayAdaptor] Transitioned from ON without Panoramic AOD, setting brightness 0"); }
+                        BRIGHTNESS_OFF // set to 0
+                    }
+                } else {
+                    // other state, keep last value
+                    last_val
+                }
             };
 
             if val_to_write != last_val {
