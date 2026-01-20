@@ -10,7 +10,7 @@ use crate::paths::{
     is_oplus_panel_prop, oplus_bright_path, min_bright_path, persist_oplus_min,
     persist_oplus_max, bright_path, persist_dbg, display_type_prop,
 };
-use crate::utils::{read_file_int, get_max_brightness, is_panoramic_aod_enabled};
+use crate::utils::{read_file_int, get_max_brightness, get_min_brightness, is_panoramic_aod_enabled};
 use crate::scaling::{scale_brightness_linear, scale_brightness_curved};
 use crate::range::BrightnessRange;
 use crate::state::{get_prop_brightness, get_screen_state};
@@ -62,7 +62,7 @@ fn run_oplus_panel_mode() {
             }
         }
     }
-    let hw_min = read_file_int(min_bright_path()).unwrap_or(1);
+    let hw_min = get_min_brightness(dbg);
     let hw_max = get_max_brightness(dbg);
 
     let input_min = get_prop_int(persist_oplus_min()).unwrap_or(OS14_MIN);
@@ -127,7 +127,7 @@ fn run_default_mode() {
     let is_float = is_float_mode();
     let bright = bright_path();
 
-    let hw_min = read_file_int(min_bright_path()).unwrap_or(1);
+    let hw_min = get_min_brightness(dbg);
     let hw_max = get_max_brightness(dbg);
 
     let mut range = BrightnessRange::init();

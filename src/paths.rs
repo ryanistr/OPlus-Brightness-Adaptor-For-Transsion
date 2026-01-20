@@ -8,9 +8,11 @@ pub(crate) fn persist_max() -> &'static str { "persist.sys.rianixia.multibrightn
 pub(crate) fn persist_min() -> &'static str { "persist.sys.rianixia.multibrightness.min" }
 pub(crate) fn log_tag() -> &'static str { "Xia-DisplayAdaptor" }
 pub(crate) fn persist_dbg() -> &'static str { "persist.sys.rianixia.display-debug" } //set true for debug logs
-pub(crate) fn oplus_bright_path() -> &'static str { "/data/addon/oplus_display/oplus_brightness" }
-pub(crate) fn persist_oplus_min() -> &'static str { "persist.sys.rianixia-display.min" }
-pub(crate) fn persist_oplus_max() -> &'static str { "persist.sys.rianixia-display.max" }
+pub(crate) fn oplus_bright_path() -> &'static str { "/data/addon/oplus_display/oplus_brightness" } // add for OS14 and under
+pub(crate) fn persist_oplus_min() -> &'static str { "persist.sys.rianixia-display.min" }  // add for OS14 and under
+pub(crate) fn persist_oplus_max() -> &'static str { "persist.sys.rianixia-display.max" } // add for OS14 and under
 pub(crate) fn is_oplus_panel_prop() -> &'static str { "persist.sys.rianixia.is-displaypanel.support" } // add for OS14 and under
 pub(crate) fn persist_custom_devmax_prop() -> &'static str { "persist.sys.rianixia.custom.devmax.brightness" } // adjust device max value for scaling
-pub(crate) fn display_type_prop() -> &'static str { "persist.sys.rianixia.display.type" } // IPS or AMOLED
+pub(crate) fn display_type_prop() -> &'static str { "persist.sys.rianixia.display.type" } // value = IPS or AMOLED, (usually not needed)
+pub(crate) fn persist_hw_min() -> &'static str { "persist.sys.rianixia.hw_min" } 
+pub(crate) fn persist_hw_max() -> &'static str { "persist.sys.rianixia.hw_max" }
