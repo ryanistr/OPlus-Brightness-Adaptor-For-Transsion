@@ -26,9 +26,10 @@ For Android 14 (OS 14) specific instructions, see the [OS14 guide](readme-os14.m
 File structure should look like this:
 
 ```
-/vendor/bin/hw/vendor.xia.display.adaptor-V4@1.0-service
+/vendor/bin/hw/vendor.xia.display.adaptor-V6@1.0-service
 /vendor/etc/init/init.xia.display.adaptor.rc
 ```
+DO NOT ADD THE ODM BINARY INCLUDED IN THE ZIP. THOSE ARE FOR OS14.
 
 ### Step 2: Set Binary File Context to mtk_light on fs_context
 
@@ -68,5 +69,57 @@ ro.vendor.transsion.backlight_hal.optimization=1
 ro.transsion.backlight.level=-1
 ro.transsion.physical.backlight.optimization=1
 ```
+## Runtime Notes
 
+* The adaptor auto-detects `max_brightness` and `min_brightness` from the kernel unless overridden via properties.
+* Enable `persist.sys.rianixia.display-debug=true` for verbose logging to diagnose scaling and AOD behavior (log tag: `Xia-DisplayAdaptor`).
 
+### Core Configuration
+
+| Property                                  | Type | Default | Description                                                                                  |
+| ----------------------------------------- | ---: | ------: | -------------------------------------------------------------------------------------------- |
+| `persist.sys.rianixia.brightness.mode`    |  Int |     `0` | Selects the scaling algorithm.                                                               |
+|                                           |      |         | `0`: Curved (Gamma 2.2)                                                                      |
+|                                           |      |         | `1`: Linear                                                                                  |
+|                                           |      |         | `2`: Custom (75% in = 255 out)                                                               |
+| `persist.sys.rianixia.oplus.lux_aod`      | Bool | `false` | Enables specific handling for Lux AOD panels.                                                |
+|                                           |      |         | Prevents 0-brightness writes during Doze (State 3) and applies fix for raw value `2937.773`. |
+| `persist.sys.rianixia.brightness.isfloat` | Bool | `false` | Set to `true` if the ROM uses float brightness values in `debug.tracing.screen_brightness`.  |
+| `persist.sys.rianixia.display-debug`      | Bool | `false` | Enables verbose debug logging to logcat (Tag: `Xia-DisplayAdaptor`).                         |
+
+### Hardware Overrides
+
+| Property                                        | Type | Description                                                                            |
+| ----------------------------------------------- | ---: | -------------------------------------------------------------------------------------- |
+| `persist.sys.rianixia.custom.devmax.brightness` |  Int | Manually override the maximum hardware brightness value used for scaling calculations. |
+| `persist.sys.rianixia.hw_max`                   |  Int | (Auto-Generated) Cached hardware max brightness. Clear this to re-detect.              |
+| `persist.sys.rianixia.hw_min`                   |  Int | (Auto-Generated) Cached hardware min brightness. Clear this to re-detect.              |
+
+### Legacy / DisplayPanel Mode (OS 14)
+
+These properties are only relevant if `persist.sys.rianixia.is-displaypanel.support` is set to `true`.
+
+| Property                           | Type | Description                            |
+| ---------------------------------- | ---: | -------------------------------------- |
+| `persist.sys.rianixia-display.min` |  Int | Input range minimum (default: `22`).   |
+| `persist.sys.rianixia-display.max` |  Int | Input range maximum (default: `5118`). |
+
+---
+
+## Scaling Modes
+
+* **Curved (Mode 0)**: Uses a standard Gamma 2.2 approximation. Best for human perception.
+* **Linear (Mode 1)**: Direct 1:1 mapping (normalized) between input and output ranges.
+* **Custom (Mode 2)**: A specifically tuned curve where 75% of the input range maps to hardware value `255` (approx. 50% on 511 scale), with steeper scaling thereafter.
+
+---
+
+## Lux / AOD Behavior
+
+* When `persist.sys.rianixia.oplus.lux_aod` is enabled, the adaptor:
+
+  * Prevents writing `0` to the kernel backlight during Doze State 3 to avoid AOD blackouts.
+  * Applies a special-case fix for panels reporting raw brightness `2937.773`.
+
+---
+# Enjoy

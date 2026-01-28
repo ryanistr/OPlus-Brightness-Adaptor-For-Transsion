@@ -13,6 +13,8 @@ pub(crate) fn persist_oplus_min() -> &'static str { "persist.sys.rianixia-displa
 pub(crate) fn persist_oplus_max() -> &'static str { "persist.sys.rianixia-display.max" } // add for OS14 and under
 pub(crate) fn is_oplus_panel_prop() -> &'static str { "persist.sys.rianixia.is-displaypanel.support" } // add for OS14 and under
 pub(crate) fn persist_custom_devmax_prop() -> &'static str { "persist.sys.rianixia.custom.devmax.brightness" } // adjust device max value for scaling
-pub(crate) fn display_type_prop() -> &'static str { "persist.sys.rianixia.display.type" } // value = IPS or AMOLED, (usually not needed)
+pub(crate) fn display_type_prop() -> &'static str { "persist.sys.rianixia.display.type" } // value = IPS or AMOLED (usually not needed)
 pub(crate) fn persist_hw_min() -> &'static str { "persist.sys.rianixia.hw_min" } 
 pub(crate) fn persist_hw_max() -> &'static str { "persist.sys.rianixia.hw_max" }
+pub(crate) fn persist_bright_mode_prop() -> &'static str { "persist.sys.rianixia.brightness.mode" } // 0=Curved, 1=Linear, 2=Custom
+pub(crate) fn persist_lux_aod_prop() -> &'static str { "persist.sys.rianixia.oplus.lux_aod" } // for lux aod logic

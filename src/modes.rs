@@ -9,9 +9,10 @@ use crate::properties::{get_prop, get_prop_int};
 use crate::paths::{
     is_oplus_panel_prop, oplus_bright_path, min_bright_path, persist_oplus_min,
     persist_oplus_max, bright_path, persist_dbg, display_type_prop,
+    persist_lux_aod_prop, persist_bright_mode_prop,
 };
 use crate::utils::{read_file_int, get_max_brightness, get_min_brightness, is_panoramic_aod_enabled};
-use crate::scaling::{scale_brightness_linear, scale_brightness_curved};
+use crate::scaling::{scale_brightness_linear, scale_brightness_curved, scale_brightness_custom};
 use crate::range::BrightnessRange;
 use crate::state::{get_prop_brightness, get_screen_state};
 use crate::writer::write_brightness;
@@ -30,6 +31,14 @@ pub(crate) fn is_float_mode() -> bool {
 }
 pub(crate) fn is_ips_mode() -> bool {
     get_prop(display_type_prop()).as_deref() == Some("IPS")
+}
+pub(crate) fn is_lux_aod_mode() -> bool {
+    get_prop(persist_lux_aod_prop()).as_deref() == Some("true")
+}
+
+// 0 = Curved, 1 = Linear, 2 = Custom
+pub(crate) fn get_brightness_mode() -> i32 {
+    get_prop_int(persist_bright_mode_prop()).unwrap_or(0)
 }
 
 // main dispatcher
@@ -92,7 +101,12 @@ fn run_oplus_panel_mode() {
                         write_brightness(fd, current_val, &mut last_val, dbg);
                     }
                 } else {
-                    let target_val = scale_brightness_linear(oplus_bright, hw_min, hw_max, input_min, input_max);
+                    let mode = get_brightness_mode();
+                    let target_val = match mode {
+                        1 => scale_brightness_linear(oplus_bright, hw_min, hw_max, input_min, input_max),
+                        2 => scale_brightness_custom(oplus_bright, hw_min, hw_max, input_min, input_max),
+                        _ => scale_brightness_curved(oplus_bright, hw_min, hw_max, input_min, input_max),
+                    };
 
                     if current_val != target_val {
                         let diff = target_val - current_val;
@@ -125,6 +139,14 @@ fn run_default_mode() {
     let dbg = dbg_on();
     if dbg { log_d("[DisplayAdaptor] Starting in Default Mode..."); }
     let is_float = is_float_mode();
+    let mode = get_brightness_mode();
+    let is_lux_aod = is_lux_aod_mode();
+    
+    if dbg { 
+        let mode_str = match mode { 1 => "Linear", 2 => "Custom", _ => "Curved" };
+        log_d(&format!("[Default Mode] Mode: {}, Lux AOD: {}", mode_str, is_lux_aod)); 
+    }
+
     let bright = bright_path();
 
     let hw_min = get_min_brightness(dbg);
@@ -148,7 +170,12 @@ fn run_default_mode() {
         if dbg { log_d("[DisplayAdaptor] Initial brightness is 0, using fallback."); }
         prev_bright = FALLBACK_MIN; 
     }
-    let initial = scale_brightness_curved(prev_bright, hw_min, hw_max, range.min, range.max);
+    
+    let initial = match mode {
+        1 => scale_brightness_linear(prev_bright, hw_min, hw_max, range.min, range.max),
+        2 => scale_brightness_custom(prev_bright, hw_min, hw_max, range.min, range.max),
+        _ => scale_brightness_curved(prev_bright, hw_min, hw_max, range.min, range.max),
+    };
     write_brightness(fd, initial, &mut last_val, dbg);
 
     let is_ips = is_ips_mode();
@@ -164,11 +191,16 @@ fn run_default_mode() {
             raw_bright // use new value
         };
 
+        let current_mode = get_brightness_mode();
+
         if cur_bright != prev_bright || cur_state != prev_state {
             let val_to_write = if cur_state == 2 {
-                // state is on
                 if prev_state != 2 { sleep(Duration::from_millis(100)); }
-                scale_brightness_curved(cur_bright, hw_min, hw_max, range.min, range.max)
+                match current_mode {
+                    1 => scale_brightness_linear(cur_bright, hw_min, hw_max, range.min, range.max),
+                    2 => scale_brightness_custom(cur_bright, hw_min, hw_max, range.min, range.max),
+                    _ => scale_brightness_curved(cur_bright, hw_min, hw_max, range.min, range.max),
+                }
             } else if is_ips {
                 // IPS mode (no AOD)
                 if dbg { log_d(&format!("[DisplayAdaptor] IPS Mode: State is {} (OFF), setting brightness 0", cur_state)); }
@@ -181,7 +213,20 @@ fn run_default_mode() {
                     BRIGHTNESS_OFF
                 } else if cur_state == 3 || cur_state == 4 {
                     // state is doze (3) or doze_suspend (4)
-                    if is_panoramic_aod_enabled(dbg) {
+                    if cur_state == 3 && is_lux_aod {
+                        let raw_prop = get_prop("debug.tracing.screen_brightness").unwrap_or_default();
+                        if raw_prop.trim() == "2937.773" {
+                            if dbg { log_d("[DisplayAdaptor] Lux AOD: Detected, forcing brightness"); }
+                            1
+                        } else {
+                            if dbg { log_d(&format!("[DisplayAdaptor] State is 3 (Doze) & Lux AOD ON: Updating brightness: {}", cur_bright)); }
+                            match current_mode {
+                                1 => scale_brightness_linear(cur_bright, hw_min, hw_max, range.min, range.max),
+                                2 => scale_brightness_custom(cur_bright, hw_min, hw_max, range.min, range.max),
+                                _ => scale_brightness_curved(cur_bright, hw_min, hw_max, range.min, range.max),
+                            }
+                        }
+                    } else if is_panoramic_aod_enabled(dbg) {
                         if dbg { log_d(&format!("[DisplayAdaptor] State is {} Panoramic AOD is ON, skipping brightness write", cur_state)); }
                         last_val // don't set to 0
                     } else {
