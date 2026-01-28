@@ -1,7 +1,7 @@
 # Author @rianixia
 # Respect my work and give credit when use or modified.
     
-service xia.display.adaptor /vendor/bin/hw/vendor.xia.display.adaptor-V5@3.0-service
+service xia.display.adaptor /vendor/bin/hw/vendor.xia.display.adaptor-V6@1.0-service
     class late_start
     user system
     group system
