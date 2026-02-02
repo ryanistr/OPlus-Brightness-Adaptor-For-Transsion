@@ -1,7 +1,7 @@
 use std::process::Command;
 use crate::logging::{log_d, log_e};
 use crate::properties::{get_prop_int, set_prop};
-use crate::paths::{persist_custom_devmax_prop, max_bright_path, min_bright_path, persist_hw_min, persist_hw_max};
+use crate::paths::{persist_custom_devmax_prop, persist_custom_devmin_prop, max_bright_path, min_bright_path, persist_hw_min, persist_hw_max};
 
 // panoramic aod check
 pub(crate) fn is_panoramic_aod_enabled(dbg: bool) -> bool {
@@ -71,15 +71,30 @@ pub(crate) fn get_max_brightness(dbg: bool) -> i32 {
 }
 
 pub(crate) fn get_min_brightness(dbg: bool) -> i32 {
+    // Check for custom devmin override first
+    if let Some(custom_min) = get_prop_int(persist_custom_devmin_prop()) {
+        if custom_min > 0 {
+            if dbg { log_d(&format!("[DisplayAdaptor] Using custom devmin brightness for calculation: {}", custom_min)); }
+            return custom_min;
+        }
+    }
+
     if let Some(cached_min) = get_prop_int(persist_hw_min()) {
-        if dbg { log_d(&format!("[DisplayAdaptor] Using cached hw_min: {}", cached_min)); }
-        return cached_min;
+        if cached_min > 0 {
+            if dbg { log_d(&format!("[DisplayAdaptor] Using cached hw_min: {}", cached_min)); }
+            return cached_min;
+        } else {
+             // Force correction if cached value is invalid (e.g. 0)
+             if dbg { log_d(&format!("[DisplayAdaptor] Cached hw_min invalid ({}), forcing to 1.", cached_min)); }
+             set_prop(persist_hw_min(), "1");
+             return 1;
+        }
     }
 
     match read_file_int(min_bright_path()) {
         Some(mut val) => {
-            if val == 0 {
-                if dbg { log_d("[DisplayAdaptor] Detected hw_min 0 (screen off?), falling back to 1."); }
+            if val <= 0 {
+                if dbg { log_d("[DisplayAdaptor] Detected hw_min <= 0 (screen off?), falling back to 1."); }
                 val = 1;
             }
             if dbg { log_d(&format!("[DisplayAdaptor] Saving hw_min: {} to prop.", val)); }

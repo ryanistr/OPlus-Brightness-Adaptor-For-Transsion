@@ -9,7 +9,7 @@ use crate::properties::{get_prop, get_prop_int};
 use crate::paths::{
     is_oplus_panel_prop, oplus_bright_path, min_bright_path, persist_oplus_min,
     persist_oplus_max, bright_path, persist_dbg, display_type_prop,
-    persist_lux_aod_prop, persist_bright_mode_prop,
+    persist_lux_aod_prop, persist_bright_mode_prop, persist_lux_aod_brightness_prop,
 };
 use crate::utils::{read_file_int, get_max_brightness, get_min_brightness, is_panoramic_aod_enabled};
 use crate::scaling::{scale_brightness_linear, scale_brightness_curved, scale_brightness_custom};
@@ -213,11 +213,29 @@ fn run_default_mode() {
                     BRIGHTNESS_OFF
                 } else if cur_state == 3 || cur_state == 4 {
                     // state is doze (3) or doze_suspend (4)
-                    if cur_state == 3 && is_lux_aod {
+                    let is_panoramic = is_panoramic_aod_enabled(dbg);
+                    
+                    if is_lux_aod && is_panoramic {
+                         // Specific case: Lux AOD ON + Panoramic ON
+                         // Check if prop is set
+                         if let Some(target_lux) = get_prop_int(persist_lux_aod_brightness_prop()) {
+                            if target_lux > 0 {
+                                if dbg { log_d(&format!("[DisplayAdaptor] Lux+Panoramic AOD active. Forcing brightness: {}", target_lux)); }
+                                target_lux
+                            } else {
+                                // Prop empty or 0, fallback to standard logic
+                                if dbg { log_d("[DisplayAdaptor] Lux+Panoramic AOD active but prop empty/0. Maintaining last value."); }
+                                last_val
+                            }
+                         } else {
+                             last_val
+                         }
+                    } else if cur_state == 3 && is_lux_aod {
                         let raw_prop = get_prop("debug.tracing.screen_brightness").unwrap_or_default();
                         if raw_prop.trim() == "2937.773" {
-                            if dbg { log_d("[DisplayAdaptor] Lux AOD: Detected, forcing brightness"); }
-                            1
+                            let lux_val = get_prop_int(persist_lux_aod_brightness_prop()).unwrap_or(1);
+                            if dbg { log_d(&format!("[DisplayAdaptor] Lux AOD: Detected, forcing brightness to {}", lux_val)); }
+                            lux_val
                         } else {
                             if dbg { log_d(&format!("[DisplayAdaptor] State is 3 (Doze) & Lux AOD ON: Updating brightness: {}", cur_bright)); }
                             match current_mode {
@@ -226,7 +244,7 @@ fn run_default_mode() {
                                 _ => scale_brightness_curved(cur_bright, hw_min, hw_max, range.min, range.max),
                             }
                         }
-                    } else if is_panoramic_aod_enabled(dbg) {
+                    } else if is_panoramic {
                         if dbg { log_d(&format!("[DisplayAdaptor] State is {} Panoramic AOD is ON, skipping brightness write", cur_state)); }
                         last_val // don't set to 0
                     } else {
